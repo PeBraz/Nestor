@@ -6,10 +6,14 @@
 
 #define NES_MEM_SIZE 65536
 
-#define IS_NEGATIVE 0xA0
+#define IS_NEGATIVE 0x80
 
-#define NEGATIVE_FLAG 0xA0//or sign flag
+#define NEGATIVE_FLAG 0x80//or sign flag
+#define OVERFLOW_FLAG 0x40
+#define DECIMAL_FLAG 0x04
 #define ZERO_FLAG 0x02
+#define CARRY_FLAG 0x01
+
 
 #define IMMEDIATE_LDA 0xA9
 
@@ -55,7 +59,7 @@ int carry_8 (uint8_t a, uint8_t b)
 // for decimal carry (up to 99)
 int dec_carry_8 (uint8_t a, uint8_t b) 
 {
-	return a > 99 - b;
+	return a > 0x99 - b;
 }
 
 /*
@@ -98,36 +102,44 @@ void sta(struct nestor * nes, uint16_t pt_mem)
  */
 void adc(struct nestor * nes, uint8_t val)
 {
-/*
-	uint16_t new_acc = (uint16_t) val;
-	if (nes->regs.status & CARRY) {
-		new_acc +=1;
-	}
-
-	if (carry_8(nes->regs.acc, 1) 
-		|| carry_8(nes->regs.acc + 1, val)) {
-		nes->regs.status &= ~CARRY;
-	}
-	nes->regs.acc += val + 1;
 
 
-	if (overflow_8(val, nes->regs.acc)){
-		nes->regs.status |= OVERFLOW;
-	}
-	//if carry not set and next add provokes carry
-	if (!(nes->regs.status & CARRY) && !carry_8(nes->regs.acc, val)) {
-		nes->regs.status &= CARRY
+
+	int (*carry_check) (uint8_t,uint8_t) = 
+				(nes->regs.status & DECIMAL_FLAG) ? dec_carry_8 : carry_8;
+
+	//reset flags
+	nes->regs.status &= ~OVERFLOW_FLAG;
+	nes->regs.status &= ~NEGATIVE_FLAG;
+	nes->regs.status &= ~ZERO_FLAG;
+
+	if (nes->regs.status & CARRY_FLAG) {
+
+		if (!carry_check(nes->regs.acc, 1)) 
+			nes->regs.status &= ~CARRY_FLAG; 
+		
+		if (overflow_8(nes->regs.acc, 1)) 
+			nes->regs.status |= OVERFLOW_FLAG;
+
+		nes->regs.acc += 1;
 	}
 
+	if (carry_check(nes->regs.acc, val)) 
+		nes->regs.status |= CARRY_FLAG;
 
-	if (nes->regs.status < 0) {
-		nes->regs.status &= STATUS
-	}
-	else{
-		nes->regs.status &= (~STATUS)
-	}
-	//
-*/
+	if (overflow_8(nes->regs.acc, val))
+		nes->regs.status |= CARRY_FLAG;
+
+
+	nes->regs.acc += val;
+
+
+	if (nes->regs.acc & IS_NEGATIVE)
+		nes->regs.status |= NEGATIVE_FLAG;
+
+	if (!nes->regs.acc)
+		nes->regs.status |= ZERO_FLAG;
+
 }
 
 
@@ -136,10 +148,13 @@ void adc(struct nestor * nes, uint8_t val)
 int main(int arg, char * argv[])
 {
 
-	struct nestor Nes;
-
-	puts( test_immediate_lda() == 0? "SUCCESS" :"FAILURE");
-	puts( test_absolute_sta() == 0? "SUCCESS" :"FAILURE");
+	printf( "1 %s\n", test_immediate_lda() == 0? "SUCCESS" :"FAILURE");
+	printf( "2 %s\n",  test_absolute_sta() == 0? "SUCCESS" :"FAILURE");
+	printf( "3 %s\n",  test_adc() == 0? "SUCCESS" :"FAILURE");
+	printf( "4 %s\n",  test_adc_zero() == 0? "SUCCESS" :"FAILURE");
+	printf( "5 %s\n",  test_adc_negative() == 0? "SUCCESS" :"FAILURE");
+	printf( "6 %s\n",  test_adc_overflow() == 0? "SUCCESS" :"FAILURE");
+	printf( "7 %s\n",  test_adc_carry() == 0? "SUCCESS" :"FAILURE");
 	return 0;
 }
 
@@ -177,12 +192,101 @@ int test_immediate_lda() {
 
 int test_absolute_sta() {
 
-	struct nestor Nes;
+	struct nestor nes;
 
-	immediate(&Nes, lda, 45); //load accumulator with 45
-	absolute(&Nes, sta, 0x3F43); // store 45 in memory position
+	nes.regs.acc = 45;
+	absolute(&nes, sta, 0x3F43); // store 45 in memory position
 	
-	if (Nes.memory[0x3F43] != 45)	return -1;
+	if (nes.memory[0x3F43] != 45)	return -1;
 	return 0;
 
+}
+
+int test_adc() {
+
+	struct nestor nes;
+	nes = (struct nestor){.regs={0}};
+
+	immediate(&nes, adc, 45);	//add 45 to acc
+
+	if (nes.regs.acc != 45) return -1;
+	if (nes.regs.status & ZERO_FLAG) return -1;
+	if (nes.regs.status & CARRY_FLAG) return -1;
+	if (nes.regs.status & NEGATIVE_FLAG) return -1;	//failing here
+	if (nes.regs.status & OVERFLOW_FLAG) return -1;
+	if (nes.regs.status & DECIMAL_FLAG) return -1;
+
+	return 0;
+}
+
+int test_adc_zero()
+{
+	struct nestor nes;
+	nes = (struct nestor){.regs={0}};
+	immediate(&nes, adc, 0);	
+
+	if (!(nes.regs.status & ZERO_FLAG)) return -1;
+
+	if (nes.regs.acc != 0) return -1;
+	if (nes.regs.status & CARRY_FLAG) return -1;
+	if (nes.regs.status & NEGATIVE_FLAG) return -1;
+	if (nes.regs.status & OVERFLOW_FLAG) return -1;
+
+	return 0;
+}
+
+int test_adc_negative()
+{
+	struct nestor nes;
+	//negative
+	nes = (struct nestor){.regs={0}};
+	nes.regs.acc = 128;		// -1 (1000)
+	immediate(&nes, adc, 1);	// -2 (1001)
+
+	if (!(nes.regs.status & NEGATIVE_FLAG)) return -1;
+
+	if (nes.regs.acc != 129) return -1;
+	if (nes.regs.status & CARRY_FLAG) return -1;
+	if (nes.regs.status & ZERO_FLAG) return -1;
+	if (nes.regs.status & OVERFLOW_FLAG) return -1;
+
+	return 0;
+}
+
+int test_adc_overflow()
+{
+	struct nestor nes;
+	//over +127 overflow
+	nes = (struct nestor){.regs={0}};
+	nes.regs.acc = 127;		
+	immediate(&nes, adc, 1);	// 128 -> -1 (1000)
+
+	if (!(nes.regs.status & NEGATIVE_FLAG)) return -1;
+	if (!(nes.regs.status & OVERFLOW_FLAG)) return -1;
+
+	if (nes.regs.acc != 128) return -1;
+	if (nes.regs.status & CARRY_FLAG) return -1;
+	if (nes.regs.status & ZERO_FLAG) return -1;
+
+	return 0;
+}
+
+int test_adc_carry()
+{
+	struct nestor nes;
+	//under -128 overflow and carry 
+	nes = (struct nestor){.regs={0}};
+	nes.regs.acc = 255;	//-128
+	immediate(&nes, adc, 1); // 0
+
+	if (!(nes.regs.status & OVERFLOW_FLAG)) return -1;
+	if (!(nes.regs.status & CARRY_FLAG)) return -1;
+
+	if (nes.regs.acc != 0) return -1;
+	if (nes.regs.status & ZERO_FLAG) return -1;
+	if (nes.regs.status & NEGATIVE_FLAG) return -1;
+
+	//add with carr
+
+	return 0;
 }
