@@ -7,6 +7,7 @@
 #define NES_MEM_SIZE 65536
 
 #define IS_NEGATIVE 0x80
+#define SIGNED_BIT 0x80
 
 #define NEGATIVE_FLAG 0x80//or sign flag
 #define OVERFLOW_FLAG 0x40
@@ -35,9 +36,14 @@ void immediate(struct nestor * nes, void(*operation)(struct nestor *,uint8_t), u
 	operation(nes, val);
 }
 
-void absolute(struct nestor * nes, void(*operation)(struct nestor *,uint16_t), uint16_t val)
+void absolute(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*), uint16_t val)
 {
-	operation(nes, val);
+	operation(nes, &(nes->memory[val]));
+}
+
+void accumulator(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
+{	
+	operation(nes, &(nes->regs.acc));
 }
 
 void zero_page_absolute(struct nestor * nes, void(*operation)(struct nestor *,uint8_t), uint8_t val)
@@ -48,7 +54,9 @@ void zero_page_absolute(struct nestor * nes, void(*operation)(struct nestor *,ui
 
 int overflow_8 (uint8_t a, uint8_t b)
 {
-	return (a > 0xFF - b) || (a >0x7F - b);
+	return (a & SIGNED_BIT) == (b & SIGNED_BIT)?
+			 ((a+b) & SIGNED_BIT) != (a & SIGNED_BIT) : false;
+//	return  (a > 0xFF - b) || (a >0x7F - b);
 }
 //http://teaching.idallen.com/dat2343/10f/notes/040_overflow.txt
 // for binary carry (up to 255)
@@ -61,6 +69,23 @@ int dec_carry_8 (uint8_t a, uint8_t b)
 {
 	return a > 0x99 - b;
 }
+
+void negative_update(struct nestor * nes, uint8_t val)
+{
+	if (val & IS_NEGATIVE)
+		nes->regs.status |=  NEGATIVE_FLAG;
+	else 
+		nes->regs.status &= ~NEGATIVE_FLAG;
+}
+
+void zero_update(struct nestor * nes, uint8_t val)
+{
+	if (val == 0)
+		nes->regs.status |=  ZERO_FLAG;
+	else 
+		nes->regs.status &= ~ZERO_FLAG;
+}
+
 
 /*
 *
@@ -91,9 +116,9 @@ void lda(struct nestor * nes, uint8_t val)
 * 	flags: --
 */
 
-void sta(struct nestor * nes, uint16_t pt_mem)
+void sta(struct nestor * nes, uint8_t * pt_mem)
 {	
-	nes->memory[pt_mem] = nes->regs.acc;
+	* pt_mem = nes->regs.acc;
 }
 
 /*
@@ -128,7 +153,7 @@ void adc(struct nestor * nes, uint8_t val)
 		nes->regs.status |= CARRY_FLAG;
 
 	if (overflow_8(nes->regs.acc, val))
-		nes->regs.status |= CARRY_FLAG;
+		nes->regs.status |= OVERFLOW_FLAG;
 
 
 	nes->regs.acc += val;
@@ -142,7 +167,86 @@ void adc(struct nestor * nes, uint8_t val)
 
 }
 
+void and(struct nestor * nes, uint8_t val)
+{
+	nes->regs.acc &= val;
 
+	negative_update(nes, val);
+	zero_update(nes, val);
+}
+/*
+* shift left once
+*/
+void asl(struct nestor * nes, uint8_t * pt)
+{
+	if (*pt & SIGNED_BIT)
+		nes->regs.status |= CARRY_FLAG;
+	else
+		nes->regs.status &= ~CARRY_FLAG;
+
+	*pt <<= 1;
+
+	negative_update(nes, *pt);
+	zero_update(nes, *pt);
+
+}
+
+/*
+ * Branch on carry flag not set
+ */
+void bcc(struct nestor * nes, uint8_t val) 
+{
+
+	if (!(nes->regs.status & CARRY_FLAG)) nes->regs.pc += val;
+}
+
+/*
+ * Branch on carry flag  set
+ */
+void bcs(struct nestor * nes, uint8_t val) 
+{
+
+	if (nes->regs.status & CARRY_FLAG) nes->regs.pc += val;
+}
+/*
+ * Branch on zero flag set
+ */
+void beq(struct nestor * nes, uint8_t val) 
+{
+	if (nes->regs.status & ZERO_FLAG) nes->regs.pc += val;
+}
+
+/*
+ *	branch on not zero
+ *
+ */
+void bne(struct nestor * nes, uint8_t val)
+{
+	if (!(nes->regs.status & ZERO_FLAG)) nes->regs.pc += val;
+}
+
+void bit(struct nestor * nes, uint8_t * val)
+{
+	nes->regs.status = (*val & NEGATIVE_FLAG ) | (*val & OVERFLOW_FLAG);
+
+	zero_update(nes, * val & nes->regs.acc);
+}
+/*
+ * branch on negative (minus)
+ *
+ */
+void bmi(struct nestor * nes, uint8_t val)
+{
+	if (nes->regs.status & NEGATIVE_FLAG) nes->regs.pc += val;
+}
+/*
+ * branch on not negative (plus)
+ *
+ */
+void bpl(struct nestor * nes, uint8_t val)
+{
+	if (!(nes->regs.status & NEGATIVE_FLAG)) nes->regs.pc += val;
+}
 
 
 int main(int arg, char * argv[])
@@ -155,6 +259,9 @@ int main(int arg, char * argv[])
 	printf( "5 %s\n",  test_adc_negative() == 0? "SUCCESS" :"FAILURE");
 	printf( "6 %s\n",  test_adc_overflow() == 0? "SUCCESS" :"FAILURE");
 	printf( "7 %s\n",  test_adc_carry() == 0? "SUCCESS" :"FAILURE");
+	printf( "8 %s\n",  test_and() == 0? "SUCCESS" :"FAILURE");
+	printf( "9 %s\n",  test_asl() == 0? "SUCCESS" :"FAILURE");
+	printf( "10 %s\n",  test_bit() == 0? "SUCCESS" :"FAILURE");
 	return 0;
 }
 
@@ -274,19 +381,79 @@ int test_adc_overflow()
 int test_adc_carry()
 {
 	struct nestor nes;
-	//under -128 overflow and carry 
+	// carry 
 	nes = (struct nestor){.regs={0}};
 	nes.regs.acc = 255;	//-128
 	immediate(&nes, adc, 1); // 0
 
-	if (!(nes.regs.status & OVERFLOW_FLAG)) return -1;
 	if (!(nes.regs.status & CARRY_FLAG)) return -1;
+	if (!(nes.regs.status & ZERO_FLAG)) return -1;
 
 	if (nes.regs.acc != 0) return -1;
-	if (nes.regs.status & ZERO_FLAG) return -1;
+	if (nes.regs.status & NEGATIVE_FLAG) return -1;
+	if (nes.regs.status & OVERFLOW_FLAG) return -1;
+
+	return 0;
+}
+
+int test_and()
+{
+	struct nestor nes;
+
+	nes = (struct nestor){.regs={0}};
+	nes.regs.acc = 0;	//-128
+	immediate(&nes, and, 0); // 0
+
+	if (!(nes.regs.status & ZERO_FLAG)) return -1;
+	if (nes.regs.acc != 0) return -1;
 	if (nes.regs.status & NEGATIVE_FLAG) return -1;
 
-	//add with carr
+	nes.regs.acc = 0x80;
+	immediate(&nes, and, 0x80);
 
+	if (nes.regs.status & ZERO_FLAG) return -1;
+	if (nes.regs.acc != 0x80) return -1;
+	if (!(nes.regs.status & NEGATIVE_FLAG)) return -1;
+
+
+	return 0;
+
+}
+
+int test_asl()
+{
+	struct nestor nes = (struct nestor){.regs={0}};
+
+	nes.regs.acc = 0xFF;
+	accumulator(&nes, asl);
+
+	if (nes.regs.acc != 0xFE) return -1;
+	if (!(nes.regs.status & CARRY_FLAG)) return -1;
+	if (!(nes.regs.status & NEGATIVE_FLAG)) return -1;
+	if (nes.regs.status & ZERO_FLAG) return -1;
+
+	nes.regs.acc = 0;
+	accumulator(&nes, asl);
+
+	if (!(nes.regs.status & ZERO_FLAG)) return -1;
+	if (nes.regs.acc != 0) return -1;
+	if (nes.regs.status & NEGATIVE_FLAG) return -1;
+	if (nes.regs.status & CARRY_FLAG) return -1;
+
+	return 0;
+}
+
+int test_bit()
+{
+	struct nestor nes;
+
+	nes.regs.acc = 0x0F;
+	nes.memory[0x1111] = 0xF0;	// will set bit 7 and 6
+	absolute(&nes, bit, 0x1111);
+
+	if (!(nes.regs.status & NEGATIVE_FLAG)) return -1;
+	if (!(nes.regs.status & OVERFLOW_FLAG)) return -1;
+	if (!(nes.regs.status & ZERO_FLAG)) return -1;
+	
 	return 0;
 }
