@@ -4,6 +4,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define NES_DEF(OP, MODE)\
+				void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
+					MODE(nes, OP);\
+	 			}\
+
 
 #define NES_MEM_SIZE 65536
 
@@ -169,9 +174,6 @@
 #define INC_ABSOLUTE_X 0xFE
 
 
-static void (*nes_calls[0xFF])()
-
-
 struct nestor {
 	uint8_t memory[NES_MEM_SIZE];
 	struct {
@@ -185,10 +187,26 @@ struct nestor {
 };
 
 
+void nestor_st_push(struct nestor *, uint8_t);
+uint8_t nestor_st_pop(struct nestor *);
+
+
+
+uint8_t nestor_load(struct nestor * nes, uint16_t address)
+{
+	//get as a little endian address
+	return nes->memory[(address & 0xFFFE) + ((address & 0x1)^0x1)]; 
+}
+
+void implied(struct nestor * nes, void(*operation)(struct nestor *)
+{
+	operation(nes);
+}
+
 void immediate(struct nestor * nes, void(*operation)(struct nestor *,uint8_t))
 {
-	nes->memory[nes->pc ]
-	operation(nes, val);
+	operation(nes, nestor_load(nes, nes->regs.pc++));
+
 }
 
 void absolute(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*), uint16_t val)
@@ -202,27 +220,27 @@ void accumulator(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*)
 	operation(nes, &(nes->regs.acc));
 }
 
-void zero_page(struct nestor * nes, void(*operation)(struct nestor *,uint8_t), uint8_t val)
+void zero_page(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*), uint8_t val)
 {
 	operation(nes, &(nes->memory[val]));
 }
 
-void indexed_x(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint16_t val) 
+void absolute_x(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint16_t val) 
 {
 	operation(nes, &(nes->memory[nes->regs.x + val]));
 }
 
-void indexed_y(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint16_t val) 
+void absolute_y(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint16_t val) 
 {
 	operation(nes, &(nes->memory[nes->regs.y + val]));
 }
 
-void zero_page_indexed_x(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint8_t val)
+void zero_page_x(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint8_t val)
 {
 	operation(nes, &(nes->memory[nes->regs.x + val]));
 }
 
-void zero_page_indexed_y(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint8_t val)
+void zero_page_y(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*), uint8_t val)
 {
 	operation(nes, &(nes->memory[nes->regs.y + val]));
 }
@@ -233,15 +251,15 @@ void indirect(struct nestor * nes, void(*operation)(struct nestor *,uint16_t),  
 	operation(nes, (nes->memory[val + 2] << 8) | (nes->memory[val + 1]));
 }
 
-void pre_indexed_indirect(struct nestor * nes, void(*operation)(struct nestor *,uint16_t),  uint8_t val)
+void indirect_x(struct nestor * nes, void(*operation)(struct nestor *,uint16_t),  uint8_t val)
 {
 	//x + val must wrap after 0xFF, not 0xFFFF
-	int pt_zero_page = (nes->regs.x + val) & 0xFF   
-	operation(nes, ((nes->memory[(pt_zero_page + 1 ) & 0xFF] << 8) )
-					| ((nes->memory[pt_zero_page]));
+	int pt_zero_page = (nes->regs.x + val) & 0xFF;
+	operation(nes, (nes->memory[(pt_zero_page + 1 ) & 0xFF] << 8)
+					| nes->memory[pt_zero_page]);
 }
 
-void post_indexed_indirect(struct nestor * nes, void(*operation)(struct nestor *,uint16_t),  uint8_t val)
+void indirect_y(struct nestor * nes, void(*operation)(struct nestor *,uint16_t),  uint8_t val)
 {
 	int pt_page = (nes->memory[val] << 8) | (nes->memory[val + 1]);
 	operation(nes, nes->memory[pt_page + nes->regs.y]);
@@ -267,7 +285,7 @@ int borrow_8 (uint8_t a, uint8_t b)
 {
 	return a < 0xFF - b;
 }
-int dec_borrow_8()
+int dec_borrow_8(uint8_t a, uint8_t b)
 {
 	return a < 0x99 - b;
 }
@@ -520,8 +538,8 @@ void brk(struct nestor * nes)
 	nestor_st_push(nes, (uint8_t)((nes->regs.pc + 2) >> 8 )); //program counter high
 	nestor_st_push(nes, (uint8_t)(nes->regs.pc + 2));	//program counter low
 	nestor_st_push(nes, nes->regs.status);	//status register
-	nes->regs.pc = 0xFFFFFFFE;	//interrupt vector
 
+	nes->regs.pc = (nes->memory[0xFFFF] << 8) | nes->memory[0xFFFE];
 	nes->regs.status |= BREAK_FLAG;
 }
 /*
@@ -826,11 +844,204 @@ void tya(struct nestor * nes)
 }
 
 
+NES_DEF(adc, immediate);
+NES_DEF(adc, zero_page);
+NES_DEF(adc, zero_page_x);
+NES_DEF(adc, absolute);
+NES_DEF(adc, absolute_x);
+NES_DEF(adc, absolute_y);
+NES_DEF(adc, indirect_x);
+NES_DEF(adc, indirect_y);
+
+NES_DEF(and, immediate);
+NES_DEF(and, zero_page);
+NES_DEF(and, zero_page_x);
+NES_DEF(and, absolute);
+NES_DEF(and, absolute_x);
+NES_DEF(and, absolute_y);
+NES_DEF(and, indirect_x);
+NES_DEF(and, indirect_y);
+
+NES_DEF(asl, accumulator);
+NES_DEF(asl, zero_page);
+NES_DEF(asl, zero_page_x);
+NES_DEF(asl, absolute);
+NES_DEF(asl, absolute_x);
+
+NES_DEF(bcc, relative);
+NES_DEF(bcs, relative);
+NES_DEF(beq, relative);
+NES_DEF(bmi, relative);
+NES_DEF(bne, relative);
+NES_DEF(bpl, relative);
+NES_DEF(bvc, relative);
+NES_DEF(bvs, relative);
+
+NES_DEF(brk, implied);
+
+NES_DEF(bit, zero_page);
+NES_DEF(bit, absolute);
+
+NES_DEF(clc, implied);
+NES_DEF(cld, implied);
+NES_DEF(cli, implied);
+NES_DEF(clv, implied);
+
+NES_DEF(cmp, immediate);
+NES_DEF(cmp, zero_page);
+NES_DEF(cmp, zero_page_x);
+NES_DEF(cmp, absolute);
+NES_DEF(cmp, absolute_x);
+NES_DEF(cmp, absolute_y);
+NES_DEF(cmp, indirect_x);
+NES_DEF(cmp, indirect_y);
+
+NES_DEF(cpx, immediate);
+NES_DEF(cpx, zero_page);
+NES_DEF(cpx, absolute);
+
+NES_DEF(cpy, immediate);
+NES_DEF(cpy, zero_page);
+NES_DEF(cpy, absolute);
+
+NES_DEF(dec, zero_page);
+NES_DEF(dec, zero_page_x);
+NES_DEF(dec, absolute);
+NES_DEF(dec, absolute_x);
+
+NES_DEF(dex, implied);
+NES_DEF(dey, implied);
+
+NES_DEF(eor, immediate);
+NES_DEF(eor, zero_page);
+NES_DEF(eor, zero_page_x);
+NES_DEF(eor, absolute);
+NES_DEF(eor, absolute_x);
+NES_DEF(eor, absolute_y);
+NES_DEF(eor, indirect_x);
+NES_DEF(eor, indirect_y);
+
+NES_DEF(inc, zero_page);
+NES_DEF(inc, zero_page_x);
+NES_DEF(inc, absolute);
+NES_DEF(inc, absolute_x);
+
+NES_DEF(inx, implied);
+NES_DEF(iny, implied);
+
+NES_DEF(jmp, absolute);
+NES_DEF(jmp, indirect);
+
+NES_DEF(jsr, absolute);
+
+NES_DEF(lda, immediate);
+NES_DEF(lda, zero_page);
+NES_DEF(lda, zero_page_x);
+NES_DEF(lda, absolute);
+NES_DEF(lda, absolute_x);
+NES_DEF(lda, absolute_y);
+NES_DEF(lda, indirect_x);
+NES_DEF(lda, indirect_y);
+
+NES_DEF(ldx, immediate);
+NES_DEF(ldx, zero_page);
+NES_DEF(ldx, zero_page_y);
+NES_DEF(ldx, absolute);
+NES_DEF(ldx, absolute_y);
+
+NES_DEF(ldy, immediate);
+NES_DEF(ldy, zero_page);
+NES_DEF(ldy, zero_page_y);
+NES_DEF(ldy, absolute);
+NES_DEF(ldy, absolute_y);
+
+
+NES_DEF(lsr, accumulator);
+NES_DEF(lsr, zero_page);
+NES_DEF(lsr, zero_page_x);
+NES_DEF(lsr, absolute);
+NES_DEF(lsr, absolute_x);
+
+NES_DEF(nop, implied);
+
+NES_DEF(ora, immediate);
+NES_DEF(ora, zero_page);
+NES_DEF(ora, zero_page_x);
+NES_DEF(ora, absolute);
+NES_DEF(ora, absolute_x);
+NES_DEF(ora, absolute_y);
+NES_DEF(ora, indirect_x);
+NES_DEF(ora, indirect_y);
+
+NES_DEF(pha, implied);
+NES_DEF(php, implied);
+
+NES_DEF(pla, implied);
+NES_DEF(plp, implied);
+
+NES_DEF(rol, accumulator);
+NES_DEF(rol, zero_page);
+NES_DEF(rol, zero_page_x);
+NES_DEF(rol, absolute);
+NES_DEF(rol, absolute_x);
+
+NES_DEF(ror, accumulator);
+NES_DEF(ror, zero_page);
+NES_DEF(ror, zero_page_x);
+NES_DEF(ror, absolute);
+NES_DEF(ror, absolute_x);
+
+NES_DEF(rti, implied);
+NES_DEF(rts, implied);
+
+NES_DEF(sbc, immediate);
+NES_DEF(sbc, zero_page);
+NES_DEF(sbc, zero_page_x);
+NES_DEF(sbc, absolute);
+NES_DEF(sbc, absolute_x);
+NES_DEF(sbc, absolute_y);
+NES_DEF(sbc, indirect_x);
+NES_DEF(sbc, indirect_y);
+
+NES_DEF(sec, implied);
+NES_DEF(sed, implied);
+NES_DEF(sei, implied);
+
+NES_DEF(sta, zero_page);
+NES_DEF(sta, zero_page_x);
+NES_DEF(sta, absolute);
+NES_DEF(sta, absolute_x);
+NES_DEF(sta, absolute_y);
+NES_DEF(sta, indirect_x);
+NES_DEF(sta, indirect_y);
+
+NES_DEF(stx, zero_page);
+NES_DEF(stx, zero_page_x);
+NES_DEF(stx, absolute);
+
+NES_DEF(sty, zero_page);
+NES_DEF(sty, zero_page_x);
+NES_DEF(sty, absolute);
+
+NES_DEF(tax, implied);
+NES_DEF(tay, implied);
+
+NES_DEF(tsx, implied);
+NES_DEF(txa, implied);
+NES_DEF(txs, implied);
+NES_DEF(tya, implied);
+
+
 int main(int arg, char * argv[])
 {
 
+	static void (*opcodes[0xFF])(void);
+
+	opcodes[BRK] = nes_call_brk(nes);
+	opcodes[] 
+
 	printf( "1 %s\n", test_immediate_lda() == 0? "SUCCESS" :"FAILURE");
-	printf( "2 %s\n",  test_absolute_sta() == 0? "SUCCESS" :"FAILURE");
+	/*printf( "2 %s\n",  test_absolute_sta() == 0? "SUCCESS" :"FAILURE");
 	printf( "3 %s\n",  test_adc() == 0? "SUCCESS" :"FAILURE");
 	printf( "4 %s\n",  test_adc_zero() == 0? "SUCCESS" :"FAILURE");
 	printf( "5 %s\n",  test_adc_negative() == 0? "SUCCESS" :"FAILURE");
@@ -839,26 +1050,27 @@ int main(int arg, char * argv[])
 	printf( "8 %s\n",  test_and() == 0? "SUCCESS" :"FAILURE");
 	printf( "9 %s\n",  test_asl() == 0? "SUCCESS" :"FAILURE");
 	printf( "10 %s\n",  test_bit() == 0? "SUCCESS" :"FAILURE");
-	return 0;
+	*/return 0;
 }
 
 void nestor_st_push(struct nestor * nes, uint8_t val)
 {
 	nes->memory[nes->regs.sp--] = val;
 }
-uint8_t nestor_st_pop(struct nestor * nes, uint8_t val)
+uint8_t nestor_st_pop(struct nestor * nes)
 {
-	return nes->memory[++nes->regs.sp]
+	return nes->memory[++nes->regs.sp];
 }
 
 struct nestor nestor_init()
 {
 	return (struct nestor){
 		.regs = {
-			.sp = 0x01FF;
+			.sp = 0x01FF
 		}
 	};
 }
+
 
 void emulate(struct nestor * nes)
 {
@@ -866,13 +1078,23 @@ void emulate(struct nestor * nes)
 	uint8_t opcode = nes->memory[nes->regs.pc];
 
 	switch (opcode){
-		case IMMEDIATE_LDA:
-			immediate(nes, lda, 69);
+		case LDA_IMMEDIATE:
+			nes_call_lda_immediate(nes);
 			break;
 	}
 
 
 }
+
+
+//tests
+
+uint8_t nestor_set_byte(struct nestor * nes, uint16_t p_byte, uint8_t val)
+{
+	//get as a little endian address
+	nes->memory[(p_byte & 0xFFFE) + ((p_byte & 0x1)^0x1)] = val; 
+}
+
 
 /*
 *	TEST LDA
@@ -882,16 +1104,20 @@ int test_immediate_lda() {
 
 	struct nestor Nes;
 
-	immediate(&Nes, lda, 0);
+	Nes.regs.pc = 0x0601;
+	nestor_set_byte(&Nes, 0x0601, 0x22);
+
+	immediate(&Nes, lda);
 	
-	if (Nes.regs.acc != 0)	return -1;
-	if (Nes.regs.status & ZERO_FLAG == ZERO_FLAG)	return -1;
+	if (Nes.regs.acc != 0x22)	return -1;
+	if (Nes.regs.status & ZERO_FLAG != ZERO_FLAG)	return -1;
 	if (Nes.regs.status & NEGATIVE_FLAG != NEGATIVE_FLAG) return -1;
 
 	return 0;
 
 }
 
+/*
 int test_absolute_sta() {
 
 	struct nestor nes;
@@ -1052,3 +1278,4 @@ int test_bit()
 	
 	return 0;
 }
+*/
