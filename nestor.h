@@ -1,24 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <stdint.h>
-
 #ifndef NESTOR_H
 #define NESTOR_H
 
-#define DEBUG
 
-#ifdef DEBUG
-#define NES_DEF(OP, MODE) void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
-                    printf("DEBUG: %s - %s\n", #op, #mode);\
-                    MODE(nes, OP);\
-                }
-#else
-#define NES_DEF(OP, MODE)\
-                void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
-                    MODE(nes, OP);\
-                }\
-#endif
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+
+#define DEBUG
 
 
 #define NES_MEM_SIZE 65536
@@ -202,6 +191,21 @@ struct nestor {
     } regs;
 };
 
+/*
+#ifdef DEBUG
+#define NES_DEF(OP, MODE) void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
+                    printf("DEBUG: %s - %s\n", #op, #mode);\
+                    MODE(nes, OP);\
+                }
+#else
+**/
+#define NES_DEF(OP, MODE) \
+   void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
+                    MODE(nes, OP);\
+                }
+//#endif
+
+
 struct nestor nestor_init();
 
 void nestor_st_push(struct nestor *, uint8_t);
@@ -212,18 +216,77 @@ uint8_t * nestor_load(struct nestor *, uint16_t);
 
 void implied(struct nestor *, void(*operation)(struct nestor *));
 void immediate(struct nestor *, void(*operation)(struct nestor *,uint8_t));
-void absolute(struct nestor *, void(*operation)(struct nestor *,uint8_t*));
+void absolute(struct nestor *, void(*operation)(struct nestor *,uint16_t));
 void accumulator(struct nestor *, void(*operation)(struct nestor *,uint8_t*));
-void zero_page(struct nestor *, void(*operation)(struct nestor *,uint8_t*));
+void zero_page(struct nestor *, void(*operation)(struct nestor *,uint8_t));
 void absolute_x(struct nestor *,void(*operation)(struct nestor *,uint8_t*));
 void absolute_y(struct nestor *,void(*operation)(struct nestor *,uint8_t*));
 void zero_page_x(struct nestor *,void(*operation)(struct nestor *,uint8_t*));
-void zero_page_y(struct nestor *,void(*operation)(struct nestor *,uint8_t*);
+void zero_page_y(struct nestor *,void(*operation)(struct nestor *,uint8_t*));
 void indirect(struct nestor *, void(*operation)(struct nestor *,uint16_t));
 void indirect_x(struct nestor *, void(*operation)(struct nestor *,uint16_t));
 void indirect_y(struct nestor *, void(*operation)(struct nestor *,uint16_t));
 void relative(struct nestor *, void(*operation)(struct nestor *,uint8_t));
 
+void lda(struct nestor *, uint8_t);
+void ldx(struct nestor *, uint8_t);
+void ldy(struct nestor *, uint8_t);
+void sta(struct nestor *, uint8_t *);
+void adc(struct nestor *, uint8_t*);
+void and(struct nestor *, uint8_t*);
+void asl(struct nestor *, uint8_t*);
+void lsr(struct nestor *, uint8_t*);
+void bcc(struct nestor *, uint8_t);
+void bcs(struct nestor *, uint8_t);
+void beq(struct nestor *, uint8_t);
+void bne(struct nestor *, uint8_t);
+void bit(struct nestor *, uint8_t*);
+void bmi(struct nestor *, uint8_t);
+void bpl(struct nestor *, uint8_t);
+void bvc(struct nestor *, uint8_t);
+void bvs(struct nestor *, uint8_t);
+void brk(struct nestor *);
+void clc(struct nestor *);
+void cld(struct nestor *);
+void cli(struct nestor *);
+void clv(struct nestor *);
+void cmp(struct nestor *, uint8_t*);
+void cpx(struct nestor *, uint8_t*);
+void cpy(struct nestor *, uint8_t*);
+void dec(struct nestor *, uint8_t*);
+void dex(struct nestor *);
+void dey(struct nestor *);
+void eor(struct nestor *, uint8_t*);
+void inc(struct nestor *, uint8_t*);
+void inx(struct nestor *);
+void iny(struct nestor *);
+void jmp(struct nestor *, uint16_t);
+void jsr(struct nestor *, uint8_t);
+void nop(struct nestor *);
+void ora(struct nestor *, uint8_t);
+void pha(struct nestor *);
+void php(struct nestor *);
+void pla(struct nestor *);
+void plp(struct nestor *);
+void rol(struct nestor *, uint8_t *);
+void ror(struct nestor *, uint8_t *);
+void rti(struct nestor *);
+void rts(struct nestor *);
+void sbc(struct nestor *, uint8_t);
+void sec(struct nestor *);
+void sed(struct nestor *);
+void sei(struct nestor *);
+void stx(struct nestor *, uint8_t *);
+void sty(struct nestor *, uint8_t *);
+void tax(struct nestor *);
+void tay(struct nestor *);
+void tsx(struct nestor *);
+void txa(struct nestor *);
+void txs(struct nestor *);
+void tya(struct nestor *);
+
+
 
 
 #endif
+

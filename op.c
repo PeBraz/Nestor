@@ -1,11 +1,12 @@
-#include <stdio.h>
 #include "nestor.h"
 
-uint8_t * nestor_load(struct nestor * nes, uint16_t address)
+
+uint8_t * nestor_load(struct nestor * nes, uint16_t address) 
 {
     //get as a little endian address
     return &(nes->memory[(address & 0xFFFE) + ((address & 0x1)^0x1)]); 
 }
+
 
 void nestor_st_push(struct nestor * nes, uint8_t val)
 {
@@ -108,9 +109,9 @@ void sta(struct nestor * nes, uint8_t * pt_mem)
  * Adds memory to accumulator with carry
  *
  */
-void adc(struct nestor * nes, uint8_t val)
+void adc(struct nestor * nes, uint16_t mem_pt)
 {
-
+    uint8_t val = *nestor_load(nes, mem_pt)
 
 
     int (*carry_check) (uint8_t,uint8_t) = 
