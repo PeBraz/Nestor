@@ -68,28 +68,28 @@ void zero_update(struct nestor * nes, uint8_t val)
 * 
 * flags: Z, N
 */
-void lda(struct nestor * nes, uint8_t val)
+void lda(struct nestor * nes, uint8_t * mem)
 {   
-    nes->regs.acc = val;
+    nes->regs.acc = *mem;
 
-    zero_update(nes, val);
-    negative_update(nes, val);
+    zero_update(nes, *mem);
+    negative_update(nes, *mem);
 }
 
-void ldx(struct nestor * nes, uint8_t val)
+void ldx(struct nestor * nes, uint8_t * mem)
 {   
-    nes->regs.x = val;
+    nes->regs.x = *mem;
 
-    zero_update(nes, val);
-    negative_update(nes, val);
+    zero_update(nes, *mem);
+    negative_update(nes, *mem);
 }
 
-void ldy(struct nestor * nes, uint8_t val)
+void ldy(struct nestor * nes, uint8_t * mem)
 {   
-    nes->regs.y = val;
+    nes->regs.y = *mem;
 
-    zero_update(nes, val);
-    negative_update(nes, val);
+    zero_update(nes, *mem);
+    negative_update(nes, *mem);
 }
 
 
@@ -100,19 +100,17 @@ void ldy(struct nestor * nes, uint8_t val)
 *   flags: --
 */
 
-void sta(struct nestor * nes, uint8_t * pt_mem)
+void sta(struct nestor * nes, uint8_t * mem)
 {   
-    * pt_mem = nes->regs.acc;
+    * mem = nes->regs.acc;
 }
 
 /*
  * Adds memory to accumulator with carry
  *
  */
-void adc(struct nestor * nes, uint16_t mem_pt)
+void adc(struct nestor * nes, uint8_t * mem)
 {
-    uint8_t val = *nestor_load(nes, mem_pt)
-
 
     int (*carry_check) (uint8_t,uint8_t) = 
                 (nes->regs.status & DECIMAL_FLAG) ? dec_carry_8 : carry_8;
@@ -133,14 +131,14 @@ void adc(struct nestor * nes, uint16_t mem_pt)
         nes->regs.acc += 1;
     }
 
-    if (carry_check(nes->regs.acc, val)) 
+    if (carry_check(nes->regs.acc, *mem)) 
         nes->regs.status |= CARRY_FLAG;
 
-    if (overflow_8(nes->regs.acc, val))
+    if (overflow_8(nes->regs.acc, *mem))
         nes->regs.status |= OVERFLOW_FLAG;
 
 
-    nes->regs.acc += val;
+    nes->regs.acc += *mem;
 
 
     if (nes->regs.acc & IS_NEGATIVE)
@@ -151,44 +149,44 @@ void adc(struct nestor * nes, uint16_t mem_pt)
 
 }
 
-void and(struct nestor * nes, uint8_t val)
+void and(struct nestor * nes, uint8_t *mem)
 {
-    nes->regs.acc &= val;
+    nes->regs.acc &= *mem;
 
-    negative_update(nes, val);
-    zero_update(nes, val);
+    negative_update(nes, *mem);
+    zero_update(nes, *mem);
 }
 /*
 * shift left once
 */
-void asl(struct nestor * nes, uint8_t * pt)
+void asl(struct nestor * nes, uint8_t *mem)
 {
-    if (*pt & SIGNED_BIT)
+    if (*mem & SIGNED_BIT)
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    *pt <<= 1;
+    *mem <<= 1;
 
-    negative_update(nes, *pt);
-    zero_update(nes, *pt);
+    negative_update(nes, *mem);
+    zero_update(nes, *mem);
 
 }
 
 /*
  * Shift right once
 */
-void lsr(struct nestor * nes, uint8_t * pt)
+void lsr(struct nestor * nes, uint8_t * mem)
 {
-    if (*pt & 0x1)
+    if (*mem & 0x1)
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    *pt >>= 1;
+    *mem >>= 1;
 
     nes->regs.status &= ~NEGATIVE_FLAG;
-    zero_update(nes, *pt);
+    zero_update(nes, *mem);
 
 }
 
@@ -230,11 +228,11 @@ void bne(struct nestor * nes, uint8_t val)
         nes->regs.pc = (uint8_t)((int8_t)nes->regs.pc + (int8_t)val);
 }
 
-void bit(struct nestor * nes, uint8_t * val)
+void bit(struct nestor * nes, uint8_t *mem)
 {
-    nes->regs.status = (*val & NEGATIVE_FLAG ) | (*val & OVERFLOW_FLAG);
+    nes->regs.status = (*mem & NEGATIVE_FLAG ) | (*mem & OVERFLOW_FLAG);
 
-    zero_update(nes, * val & nes->regs.acc);
+    zero_update(nes, * mem & nes->regs.acc);
 }
 /*
  * branch on negative (minus)
@@ -310,44 +308,44 @@ void clv(struct nestor * nes)
     nes->regs.status &= ~OVERFLOW_FLAG;
 }
 
-void cmp(struct nestor * nes, uint8_t val)
+void cmp(struct nestor * nes, uint8_t *mem)
 {
-    if (borrow_8(nes->regs.acc, val))
+    if (borrow_8(nes->regs.acc, *mem))
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    zero_update(nes, nes->regs.acc - val);
-    negative_update(nes, nes->regs.acc - val);
+    zero_update(nes, nes->regs.acc - *mem);
+    negative_update(nes, nes->regs.acc - *mem);
 }
 
-void cpx(struct nestor * nes, uint8_t val)
+void cpx(struct nestor * nes, uint8_t *mem)
 {
-    if (borrow_8(nes->regs.x, val))
+    if (borrow_8(nes->regs.x, *mem))
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    zero_update(nes, nes->regs.x - val);
-    negative_update(nes, nes->regs.x - val);
+    zero_update(nes, nes->regs.x - *mem);
+    negative_update(nes, nes->regs.x - *mem);
 }
 
-void cpy(struct nestor * nes, uint8_t val)
+void cpy(struct nestor * nes, uint8_t *mem)
 {
-    if (borrow_8(nes->regs.y, val))
+    if (borrow_8(nes->regs.y, *mem))
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    zero_update(nes, nes->regs.y - val);
-    negative_update(nes, nes->regs.y - val);
+    zero_update(nes, nes->regs.y - *mem);
+    negative_update(nes, nes->regs.y - *mem);
 }
 
-void dec(struct nestor * nes, uint8_t *pt)
+void dec(struct nestor * nes, uint8_t *mem)
 {
-    *pt -= 1;
-    negative_update(nes, *pt);
-    zero_update(nes, *pt);
+    *mem -= 1;
+    negative_update(nes, *mem);
+    zero_update(nes, *mem);
 }
 
 void dex(struct nestor * nes)
@@ -364,18 +362,18 @@ void dey(struct nestor * nes)
     zero_update(nes, nes->regs.y);
 }
 
-void eor(struct nestor * nes, uint8_t val)
+void eor(struct nestor * nes, uint8_t *mem)
 {
-    nes->regs.acc ^= val;
+    nes->regs.acc ^= *mem;
     negative_update(nes, nes->regs.acc);
     zero_update(nes, nes->regs.acc);
 }
 
-void inc(struct nestor * nes, uint8_t * pt)
+void inc(struct nestor * nes, uint8_t *mem)
 {
-    *pt += 1;
-    negative_update(nes, *pt);
-    zero_update(nes, *pt);
+    *mem += 1;
+    negative_update(nes, *mem);
+    zero_update(nes, *mem);
 }
 
 void inx(struct nestor * nes)
@@ -400,17 +398,19 @@ void jmp(struct nestor * nes, uint16_t val)
 /*
  * Jump and save return address
  */
-void jsr(struct nestor * nes, uint8_t val)
-{
-    nestor_st_push(nes, nes->regs.pc + 2);
+void jsr(struct nestor * nes, uint16_t val)
+{   
+    nes->regs.pc--; //?
+    nestor_st_push(nes, (uint8_t)(nes->regs.pc >> 8));
+    nestor_st_push(nes, (uint8_t) nes->regs.pc);
     jmp(nes, val);
 }
 
 void nop(struct nestor * nes) {} //just because
 
-void ora(struct nestor * nes, uint8_t val)
+void ora(struct nestor * nes, uint8_t * mem)
 {
-    nes->regs.acc |= val;
+    nes->regs.acc |= *mem;
     negative_update(nes, nes->regs.acc);
     zero_update(nes, nes->regs.acc);
 }
@@ -438,36 +438,37 @@ void plp(struct nestor * nes)
 }
 
 
-void rol(struct nestor * nes, uint8_t * pt)
+void rol(struct nestor * nes, uint8_t * mem)
 {
     int carry = nes->regs.status & CARRY_FLAG;
 
-    if (*pt & SIGNED_BIT)
+    if (*mem & SIGNED_BIT)
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    *pt <<= 1;
-    if (carry) *pt += 1;
+    *mem <<= 1;
+    if (carry) *mem += 1;
 
-    negative_update(nes, *pt);
-    zero_update(nes, *pt);
+    negative_update(nes, *mem);
+    zero_update(nes, *mem);
 
 }
-void ror(struct nestor * nes, uint8_t * pt)
+
+void ror(struct nestor * nes, uint8_t * mem)
 {
     int carry = nes->regs.status & CARRY_FLAG;
 
-    if (*pt & 0x1)
+    if (*mem & 0x1)
         nes->regs.status |= CARRY_FLAG;
     else
         nes->regs.status &= ~CARRY_FLAG;
 
-    *pt <<= 1;
-    if (carry) *pt += 0x80; //add old carry to bit 7
+    *mem <<= 1;
+    if (carry) *mem += 0x80; //add old carry to bit 7
 
-    negative_update(nes, *pt);
-    zero_update(nes, *pt);
+    negative_update(nes, *mem);
+    zero_update(nes, *mem);
 
 
 }
@@ -484,7 +485,7 @@ void rts(struct nestor * nes)
     nes->regs.pc +=1;
 }
 
-void sbc(struct nestor * nes, uint8_t val)
+void sbc(struct nestor * nes, uint8_t * mem)
 {
 
     int (*borrow_check) (uint8_t,uint8_t) = 
@@ -506,14 +507,14 @@ void sbc(struct nestor * nes, uint8_t val)
         nes->regs.acc -= 1;
     }
 
-    if (borrow_check(nes->regs.acc, val)) 
+    if (borrow_check(nes->regs.acc, *mem)) 
         nes->regs.status |= CARRY_FLAG;
 
-    if (overflow_8(nes->regs.acc, val))
+    if (overflow_8(nes->regs.acc, *mem))
         nes->regs.status |= OVERFLOW_FLAG;
 
 
-    nes->regs.acc -= val;
+    nes->regs.acc -= *mem;
 
 
     if (nes->regs.acc & IS_NEGATIVE)

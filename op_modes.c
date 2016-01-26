@@ -23,6 +23,12 @@ void absolute(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
     operation(nes, nestor_load(nes, byte_pos));
 }
 
+void jmp_absolute(struct nestor * nes, void(*operation)(struct nestor *,uint16_t))
+{
+    uint16_t byte_pos = (*nestor_load(nes, ++nes->regs.pc) << 8) | *nestor_load(nes, ++nes->regs.pc);
+    operation(nes, byte_pos);
+}
+
 
 void accumulator(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 {   
@@ -55,18 +61,20 @@ void zero_page_y(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*))
 }
 
 //only for jump
-void indirect(struct nestor * nes, void(*operation)(struct nestor *,uint16_t));
+void indirect(struct nestor * nes, void(*operation)(struct nestor *,uint16_t))
 {
-    operation(nes, nestor_load(nes, (++nes->regs.pc) << 8) 
-                                | nestor_load(++nes->regs.pc));
+    operation(nes, *nestor_load(nes, (++nes->regs.pc) << 8) 
+                                | *nestor_load(nes, ++nes->regs.pc));
 }
 
+
+//??? review this piece 
 void indirect_x(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 {
     //x + val must wrap after 0xFF, not 0xFFFF
-    int pt_zero_page = (nes->regs.x + ++nes->regs.pc) & 0xFF;
-    operation(nes, nester_load((nester_load(nes, pt_zero_page) << 8)
-                    | nester_load(nes, ++pt_zero_page  & 0xFF)));
+    uint16_t pt_zero_page = (nes->regs.x + ++nes->regs.pc) & 0xFF;
+    operation(nes,(uint16_t)( *nester_load(nes, (*nester_load(nes, pt_zero_page) << 8)
+                    | *nester_load(nes, ++pt_zero_page  & 0xFF))));
 }
 
 void indirect_y(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
