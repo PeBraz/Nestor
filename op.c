@@ -4,7 +4,8 @@
 uint8_t * nestor_load(struct nestor * nes, uint16_t address) 
 {
     //get as a little endian address
-    return &(nes->memory[(address & 0xFFFE) + ((address & 0x1)^0x1)]); 
+      return &(nes->memory[address^0x1]);
+    //return &(nes->memory[(address & 0xFFFE) + ((address & 0x1)^0x1)]); 
 }
 
 

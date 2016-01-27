@@ -406,6 +406,6 @@ void emulate(struct nestor * nes)
 uint8_t nestor_set_byte(struct nestor * nes, uint16_t p_byte, uint8_t val)
 {
 	//get as a little endian address
-	nes->memory[(p_byte & 0xFFFE) + ((p_byte & 0x1)^0x1)] = val; 
+	nes->memory[p_byte^0x1] = val; 
 }
 
