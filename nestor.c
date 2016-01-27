@@ -1,7 +1,5 @@
 #include "nestor.h"
 
-
-
 NES_DEF(adc, immediate);
 NES_DEF(adc, zero_page);
 NES_DEF(adc, zero_page_x);
@@ -87,10 +85,10 @@ NES_DEF(inc, absolute_x);
 NES_DEF(inx, implied);
 NES_DEF(iny, implied);
 
-NES_DEF(jmp, absolute);
+NES_DEF(jmp, jmp_absolute);
 NES_DEF(jmp, indirect);
 
-NES_DEF(jsr, absolute);
+NES_DEF(jsr, jmp_absolute);
 
 NES_DEF(lda, immediate);
 NES_DEF(lda, zero_page);
@@ -109,9 +107,9 @@ NES_DEF(ldx, absolute_y);
 
 NES_DEF(ldy, immediate);
 NES_DEF(ldy, zero_page);
-NES_DEF(ldy, zero_page_y);
+NES_DEF(ldy, zero_page_x);
 NES_DEF(ldy, absolute);
-NES_DEF(ldy, absolute_y);
+NES_DEF(ldy, absolute_x);
 
 
 NES_DEF(lsr, accumulator);
@@ -174,7 +172,7 @@ NES_DEF(sta, indirect_x);
 NES_DEF(sta, indirect_y);
 
 NES_DEF(stx, zero_page);
-NES_DEF(stx, zero_page_x);
+NES_DEF(stx, zero_page_y);
 NES_DEF(stx, absolute);
 
 NES_DEF(sty, zero_page);
@@ -199,11 +197,6 @@ struct nestor nestor_init()
 			.sp = 0x01FF
 		}
 	};
-
-	nes.opcodes[BRK] = nes_call_brk;
-	nes.opcodes[ORA_INDIRECT_X] = nes_call_ora_indirect_x;
-	nes.opcodes[ORA_ZERO_PAGE] = nes_call_ora_zero_page;
-	nes.opcodes[ASL_ZERO_PAGE] = nes_call_asl_zero_page;
 
 	nes.opcodes[ADC_IMMEDIATE] = nes_call_adc_immediate;
 	nes.opcodes[ADC_ZERO_PAGE] = nes_call_adc_zero_page;
@@ -235,10 +228,10 @@ struct nestor nestor_init()
 	nes.opcodes[BMI] = nes_call_bmi_relative;
 	nes.opcodes[BNE] = nes_call_bne_relative;
 	nes.opcodes[BPL] = nes_call_bpl_relative;
-	nes.opcodes[BVC] = nes_call_bcv_relative;
+	nes.opcodes[BVC] = nes_call_bvc_relative;
 	nes.opcodes[BVS] = nes_call_bvs_relative;
 
-	nes.opcodes[BRK] = nes_call_brk;
+	nes.opcodes[BRK] = nes_call_brk_implied;
 	
 	nes.opcodes[BIT_ABSOLUTE] = nes_call_bit_absolute;
 	nes.opcodes[BIT_ZERO_PAGE] = nes_call_bit_zero_page;
@@ -283,17 +276,17 @@ struct nestor nestor_init()
 	nes.opcodes[EOR_INDIRECT_Y] = nes_call_eor_indirect_y;
 
 	nes.opcodes[INC_ZERO_PAGE] = nes_call_inc_zero_page;
-	nes.opcodes[INC_ZERO_PAGE_x] = nes_call_inc_zero_page_x;
+	nes.opcodes[INC_ZERO_PAGE_X] = nes_call_inc_zero_page_x;
 	nes.opcodes[INC_ABSOLUTE] = nes_call_inc_absolute;
 	nes.opcodes[INC_ABSOLUTE_X] = nes_call_inc_absolute_x;
 
 	nes.opcodes[INX] = nes_call_inx_implied;
 	nes.opcodes[INY] = nes_call_iny_implied;
 
-	nes.opcodes[JMP_ABSOLUTE] = nes_call_jmp_absolute;
+	nes.opcodes[JMP_ABSOLUTE] = nes_call_jmp_jmp_absolute;
 	nes.opcodes[JMP_INDIRECT] = nes_call_jmp_indirect;
 
-	nes.opcodes[JSR] = nes_call_jsr_absolute;
+	nes.opcodes[JSR] = nes_call_jsr_jmp_absolute;
 
 	nes.opcodes[LDA_IMMEDIATE] = nes_call_lda_immediate;
 	nes.opcodes[LDA_ZERO_PAGE] = nes_call_lda_zero_page;
@@ -306,38 +299,38 @@ struct nestor nestor_init()
 
 	nes.opcodes[LDX_IMMEDIATE] = nes_call_ldx_immediate;
 	nes.opcodes[LDX_ZERO_PAGE] = nes_call_ldx_zero_page;
-	nes.opcodes[LDX_ZERO_PAGE_Y] = nes_call_ldx_zero_page_x; 
+	nes.opcodes[LDX_ZERO_PAGE_Y] = nes_call_ldx_zero_page_y; 
 	nes.opcodes[LDX_ABSOLUTE] = nes_call_ldx_absolute;
 	nes.opcodes[LDX_ABSOLUTE_Y] = nes_call_ldx_absolute_y;
 
 	nes.opcodes[LDY_IMMEDIATE] = nes_call_ldy_immediate;
 	nes.opcodes[LDY_ZERO_PAGE] = nes_call_ldy_zero_page;
-	nes.opcodes[LDY_ZERO_PAGE_Y] = nes_call_ldy_zero_page_x; 
+	nes.opcodes[LDY_ZERO_PAGE_X] = nes_call_ldy_zero_page_x; 
 	nes.opcodes[LDY_ABSOLUTE] = nes_call_ldy_absolute;
-	nes.opcodes[LDY_ABSOLUTE_Y] = nes_call_ldy_absolute_y;
+	nes.opcodes[LDY_ABSOLUTE_X] = nes_call_ldy_absolute_x;
 
 	nes.opcodes[LSR_ACCUMULATOR] = nes_call_lsr_accumulator;
 	nes.opcodes[LSR_ZERO_PAGE] = nes_call_lsr_zero_page;
 	nes.opcodes[LSR_ZERO_PAGE_X] = nes_call_lsr_zero_page_x; 
 	nes.opcodes[LSR_ABSOLUTE] = nes_call_lsr_absolute;
-	nes.opcodes[LSR_ABSOLUTE_X] = nes_call_lst_absolute_x;
+	nes.opcodes[LSR_ABSOLUTE_X] = nes_call_lsr_absolute_x;
 
 	nes.opcodes[NOP] = nes_call_nop_implied;
 
 	nes.opcodes[ORA_IMMEDIATE] = nes_call_ora_immediate;
 	nes.opcodes[ORA_ZERO_PAGE] = nes_call_ora_zero_page;
-	nes.opcodes[ORA_ZERO_PAGE_X] = nes_call_ora_zero_page_X; 
+	nes.opcodes[ORA_ZERO_PAGE_X] = nes_call_ora_zero_page_x; 
 	nes.opcodes[ORA_ABSOLUTE] = nes_call_ora_absolute;
-	nes.pcodes[ORA_ABSOLUTE_X] = nes_call_ora_absolute_x;
+	nes.opcodes[ORA_ABSOLUTE_X] = nes_call_ora_absolute_x;
 	nes.opcodes[ORA_ABSOLUTE_Y] = nes_call_ora_absolute_y;
-	nes.opcodes[ORA_INDIRECT_X] = nes_call_ora_indrect_x;
+	nes.opcodes[ORA_INDIRECT_X] = nes_call_ora_indirect_x;
 	nes.opcodes[ORA_INDIRECT_Y] = nes_call_ora_indirect_y; 
 
 	nes.opcodes[PHA] = nes_call_pha_implied;
 	nes.opcodes[PHP] = nes_call_php_implied;
 
 	nes.opcodes[PLA] = nes_call_pla_implied;
-	nes.opcodes[PLP] = nes_call_plp_implied
+	nes.opcodes[PLP] = nes_call_plp_implied;
 
 	nes.opcodes[ROL_ACCUMULATOR] = nes_call_rol_accumulator;
 	nes.opcodes[ROL_ZERO_PAGE] = nes_call_rol_zero_page; 

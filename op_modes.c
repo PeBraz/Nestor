@@ -73,15 +73,15 @@ void indirect_x(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 {
     //x + val must wrap after 0xFF, not 0xFFFF
     uint16_t pt_zero_page = (nes->regs.x + ++nes->regs.pc) & 0xFF;
-    operation(nes,(uint16_t)( *nester_load(nes, (*nester_load(nes, pt_zero_page) << 8)
-                    | *nester_load(nes, ++pt_zero_page  & 0xFF))));
+    operation(nes, nestor_load(nes, 
+        (*nestor_load(nes, pt_zero_page) << 8) | *nestor_load(nes, ++pt_zero_page  & 0xFF)));
 }
 
 void indirect_y(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 {
-    int pt_page = (nes->memory[++nes->regs.pc] << 8) 
-                    | (nes->memory[++nes->regs.pc]);
-    operation(nes, nestor_load(pt_page + nes->regs.y));
+    uint16_t pt_page = (*nestor_load(nes, ++nes->regs.pc) << 8) 
+                    | *nestor_load(nes, ++nes->regs.pc);
+    operation(nes, nestor_load(nes, pt_page + nes->regs.y));
 }
 
 //not really a requirement, it is the mode used by branch operators

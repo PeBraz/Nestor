@@ -113,7 +113,7 @@
 #define STA_ZERO_PAGE_X 0x95
 #define STX_ZERO_PAGE_Y 0x96
 #define TYA 0x98
-#define STA_ABSOLUTE_Y
+#define STA_ABSOLUTE_Y 0x99
 #define TXS 0x9A
 #define STA_ABSOLUTE_X 0x90
 #define LDY_IMMEDIATE 0xA0

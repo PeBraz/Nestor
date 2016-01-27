@@ -5,15 +5,15 @@ all: op.o op_modes.o nestor.o main.o
 	${CC} -o ${XNAME} op.o op_modes.o nestor.o main.o
 
 main.o:
-	${CC} -g main.c
+	${CC} -g -c main.c
 nestor.o:
-	${CC} -g nestor.c
+	${CC} -g -c nestor.c
 op_modes.o:
-	${CC} -g op_modes.c
+	${CC} -g -c op_modes.c
 op.o:
-	${CC} -g op.c
+	${CC} -g -c op.c
 op_tests.o:
-	${CC} -g op_tests.c
+	${CC} -g -c op_tests.c
 
 val: all
     valgrind --leak-check=full ./${XNAME}
