@@ -1,5 +1,7 @@
 #include "nestor.h"
 
+#define NES_ROM_HEADER_SIZE 16
+
 NES_DEF(adc, immediate);
 NES_DEF(adc, zero_page);
 NES_DEF(adc, zero_page_x);
@@ -396,7 +398,7 @@ void emulate(struct nestor * nes)
 	if (nes->opcodes[op] != NULL) {
 		nes->opcodes[op](nes);
 	}
-	else printf("%x: not found\n", op);
+	else printf("%02x: not found\n", op);
 
 	nes->regs.pc++;
 }
@@ -409,3 +411,66 @@ uint8_t nestor_set_byte(struct nestor * nes, uint16_t p_byte, uint8_t val)
 	nes->memory[p_byte^0x1] = val; 
 }
 
+
+int nestor_cartridge(struct nestor *nes, char *game) 
+{
+	FILE *f = fopen(game, "r");
+	
+	fseek(f, 0, SEEK_END);
+	int game_size = ftell(f);
+	rewind(f);
+
+	if (game_size > NES_MEM_SIZE)
+		return 1;
+
+	fread(nes->memory, sizeof(uint8_t), game_size, f);
+
+
+	nestor_cartridge_header(nes);
+
+	return 0;
+}
+
+
+#define INES_IS_VERTICAL_MIRROR(flag) ((flag & 0x09) == 0x0)
+#define INES_IS_HORIZONTAL_MIRROR(flag) ((flag & 0x09) == 0x1)
+#define INES_IS_FOUR_SCREEN(flag) ((flag & 0x08) == 0x8)
+
+int nestor_cartridge_header(struct nestor *nes) 
+{
+	nes->regs.pc += NES_ROM_HEADER_SIZE;
+
+
+	if (nes->memory[1] != 0x45 	//N
+		|| nes->memory[0] != 0x4e	//E
+		|| nes->memory[3] != 0x1a	//S
+		|| nes->memory[2] != 0x53)	//
+		return 1;
+
+	int prg_rom_size = (int)nes->memory[5] * 16;
+	int chr_rom_size = (int)nes->memory[4] * 8;
+
+	uint8_t flag_6 = nes->memory[7];
+
+	if (INES_IS_VERTICAL_MIRROR(flag_6))
+		;
+	else if (INES_IS_HORIZONTAL_MIRROR(flag_6))
+		;
+	else if (INES_IS_FOUR_SCREEN(flag_6))
+		;
+
+
+	int prg_ram = flag_6 & 0x02;
+	int trainer_store = flag_6 & 0x04;
+
+	uint8_t flag_7 = nes->memory[6];
+
+	uint8_t mapper_num = ((flag_6 & 0xF0) >> 8) | (flag_7 & 0xF0);
+
+	for (int i=8; i < 16; i++)
+		if (nes->memory[i] != 0x0) 
+			return 1;
+
+
+	return 0;
+}

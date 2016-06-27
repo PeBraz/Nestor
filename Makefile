@@ -1,8 +1,8 @@
 CC=gcc
 XNAME=nestor
 
-all: op.o op_modes.o nestor.o main.o
-	${CC} -o ${XNAME} op.o op_modes.o nestor.o main.o
+all: op.o op_modes.o nestor.o main.o graphi.o
+	${CC} -o ${XNAME} op.o op_modes.o nestor.o graphi.o main.o -lSDL2
 
 main.o:
 	${CC} -g -c main.c
@@ -14,6 +14,8 @@ op.o:
 	${CC} -g -c op.c
 op_tests.o:
 	${CC} -g -c op_tests.c
+graphi.o:
+	${CC} -g -c graphi.c
 
 val: all
     valgrind --leak-check=full ./${XNAME}
@@ -26,4 +28,4 @@ test: test-c
 	./{XNAME}_tests
 
 clean:
-	rm op.o op_modes.o nestor.o op_tests.o main.o
+	rm op.o op_modes.o nestor.o op_tests.o main.o graphi.o

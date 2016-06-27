@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-
+#include "graphi.h"
 
 #define DEBUG
 
@@ -179,8 +179,10 @@
 #define INC_ABSOLUTE_X 0xFE
 
 struct nestor {
-    void (*opcodes[0xFF])(struct nestor *); 
+    void (*opcodes[0xFF])(struct nestor *);
     uint8_t memory[NES_MEM_SIZE];
+
+    struct graphics video;
     struct {
         uint8_t acc;
         uint8_t x;
@@ -191,22 +193,29 @@ struct nestor {
     } regs;
 };
 
-/*
+#ifdef DEBUG 
+
 #ifdef DEBUG
-#define NES_DEF(OP, MODE) void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
-                    printf("DEBUG: %s - %s\n", #op, #mode);\
+
+#define DBG(msg, ...) fprintf(stderr, "Debug [%s:%s]: " # msg, __FILE__, __LINE__, __VA_ARGS__); 
+
+#define NES_DEF(OP, MODE) \
+    void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
+                    printf("DEBUG: %s - %s\n", #OP, #MODE);\
                     MODE(nes, OP);\
                 }
 #else
-**/
+#define DBG(msg, ...)
 #define NES_DEF(OP, MODE) \
-   void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
+    void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
                     MODE(nes, OP);\
                 }
-//#endif
+#endif
 
 
 struct nestor nestor_init();
+int nestor_cartridge(struct nestor *, char *);
+
 
 void nestor_st_push(struct nestor *, uint8_t);
 uint8_t nestor_st_pop(struct nestor *);
