@@ -48,10 +48,18 @@
 
 #define NES_V_MEM_SIZE 16384
 
+enum nes_mirror {
+    VERTICAL,
+    HORIZONTAL,
+    FOUR,
+    SINGLE,
+};
+
 struct graphics
 {
     int pallete[256];
     SDL_Window * window;
+    enum nes_mirror mirror;
     uint8_t memory[NES_V_MEM_SIZE];
 
 };

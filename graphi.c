@@ -92,6 +92,11 @@ void scanline(struct graphics* graphics, int line) {
 
 void draw_tile_from_scanline(struct graphics* graphics, int x, int y) 
 {
+
+    // fetch
+    //http://wiki.nesdev.com/w/index.php/PPU_nametables
+
+
     int offset = ((x/8) * SCREEN_WIDTH_TILES) + x;
 
     uint16_t mem_off = NAMETABLE1 + offset;
@@ -159,9 +164,9 @@ void draw_tile(struct graphics * graphics, int x, int y)
     //get offset for tile pointer in nametable
     int offset = (y * SCREEN_WIDTH_TILES) + x;
 
-    uint16_t mem_off = NAMETABLE1 + offset;
+    uint16_t mem_off = graphics->nametable + offset;
 
-    assert(mem_off >= NAMETABLE1 && mem_off < ATTRTABLE1
+    assert(mem_off >= graphics->nametable && mem_off < ATTRTABLE1
             && mem_off < NES_V_MEM_SIZE);
 
     uint8_t tile_pt = graphics->memory[mem_off];
