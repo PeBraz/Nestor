@@ -90,7 +90,7 @@ void scanline(struct graphics* graphics, int line) {
 // 0 <= x <= 32   - 1 for tile
 // 0 <= y <= 240  - 1 for scanline
 
-void draw_tile_from_scanline(int x, int y) 
+void draw_tile_from_scanline(struct graphics* graphics, int x, int y) 
 {
     int offset = ((x/8) * SCREEN_WIDTH_TILES) + x;
 

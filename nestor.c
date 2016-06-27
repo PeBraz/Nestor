@@ -467,7 +467,8 @@ int nestor_cartridge_header(struct nestor *nes)
 
 	uint8_t mapper_num = ((flag_6 & 0xF0) >> 8) | (flag_7 & 0xF0);
 
-	for (int i=8; i < 16; i++)
+	int i;
+	for (i=8; i < 16; i++)
 		if (nes->memory[i] != 0x0) 
 			return 1;
 
