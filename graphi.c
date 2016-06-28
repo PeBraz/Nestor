@@ -27,6 +27,8 @@
 #define PIXEL_WIDTH 4
 #define PIXEL_HEIGHT 2
 
+#define NAME_TO_ATTR(nametable) (nametable + 960)
+
 
 struct graphics init_graphics()
 {
@@ -96,20 +98,28 @@ void draw_tile_from_scanline(struct graphics* graphics, int x, int y)
     // fetch
     //http://wiki.nesdev.com/w/index.php/PPU_nametables
 
+    //pick a tile byte (0-959)
+    int tile_offset = ((y/8) * SCREEN_WIDTH_TILES) + x;
 
-    int offset = ((x/8) * SCREEN_WIDTH_TILES) + x;
-
-    uint16_t mem_off = NAMETABLE1 + offset;
+    uint16_t mem_off = graphics->nametable + offset;
 
     assert(mem_off >= NAMETABLE1 && mem_off < ATTRTABLE1
             && mem_off < NES_V_MEM_SIZE);
 
-    uint8_t tile_pt = graphics->memory[mem_off];
-    uint8_t tile_p1 = graphics->memory[tile_pt];
-    uint8_t tile_p2 = graphics->memory[tile_pt + 1];
+    uint8_t tile_pt = graphics->memory[mem_off^0x1];    // xor the address
+
+    uint16_t attr_table_pt = NAME_TO_ATTR(graphics->nametable) + (tile_offset/16);
+
+    uint8_t pallete_1 = graphics->memory[attr_table_pt^0x1] >> ((offset % 16) / 4) & 0x3);
+
+    assert(pallete_1 >= 0x0 && pallete_1 <= 0x3)
+
+    uint8_t tile_p1 = graphics->memory[tile_pt^0x1];
+    uint8_t tile_p2 = graphics->memory[(tile_pt + 1) 0x1];
     //... continue getting bytes, 16 total, overlay them to get color
 
-    //get upper pallete from attribue table
+    //get upper pallete from attribute table
+    // the attribute table has 64 bytes (1 byte has 4 tiles)
     //a byte holds info for 16 tiles
     mem_off = ATTRTABLE1 + offset / 16; //need to find 2 bits inside a byte(i think,. check table again)
     // take 2 bits for  palete number
