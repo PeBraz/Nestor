@@ -453,11 +453,11 @@ int nestor_cartridge_header(struct nestor *nes)
 	uint8_t flag_6 = nes->memory[7];
 
 	if (INES_IS_VERTICAL_MIRROR(flag_6))
-		nestor->graphics->mirror = VERTICAL;
+		nes->video.mirror = VERTICAL;
 	else if (INES_IS_HORIZONTAL_MIRROR(flag_6))
-		nestor->graphics->mirror = HORIZONTAL;
+		nes->video.mirror = HORIZONTAL;
 	else if (INES_IS_FOUR_SCREEN(flag_6))
-		nestor->graphics->mirror = FOUR;
+		nes->video.mirror = FOUR;
 
 
 	int prg_ram = flag_6 & 0x02;

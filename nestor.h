@@ -195,8 +195,8 @@ struct nestor {
 
 #ifdef DEBUG 
 
-#define DBG(msg, ...) fprintf(stderr, "Debug [%s:%d]: " # msg, __FILE__, __LINE__ __VA_ARGS__ ); 
-
+#define DBG(msg) fprintf(stderr, "Debug [%s:%d]: " # msg, __FILE__, __LINE__); 
+#define DBGF(msg,...) fprintf(stderr, "Debug [%s:%d]: " # msg, __FILE__, __LINE__, __VA_ARGS__);
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
                     printf("DEBUG: %s - %s\n", #OP, #MODE);\

@@ -1,7 +1,9 @@
 #define NESTOR_DEBUG
+#define NESTOR_BREAK
+
 
 #include "nestor.h"
-#include "graphi.h"
+//#include "graphi.h"
 
 
 int main(int arg, char * argv[])
@@ -22,6 +24,9 @@ int main(int arg, char * argv[])
         return 1;
     }*/
     while (true) {
+#ifdef NESTOR_BREAK
+        getchar();
+#endif        
         emulate(&Nes);
     //  update_screen(&Nes.video);    
     //  graphics(Nes);
@@ -30,7 +35,7 @@ int main(int arg, char * argv[])
     //  delay() zillion fps
     }
     
-    free_graphics(&Nes.video);
+    //free_graphics(&Nes.video);
     return 0;
 
 }

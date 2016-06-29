@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <assert.h>
+#include <string.h>
 
 #define SCREEN_WIDTH_PIXEL 256
 #define SCREEN_HEIGHT_PIXEL 240
@@ -29,6 +30,8 @@
 
 #define NAME_TO_ATTR(nametable) (nametable + 960)
 
+void  draw_tile_from_scanline(struct graphics*, int, int);
+void sprite_evaluation(struct graphics*, int, int);
 
 struct graphics init_graphics()
 {
@@ -80,7 +83,15 @@ void scanline(struct graphics* graphics, int line) {
         //dummy line -- do nothing
     } 
     else if (line >= 21 && line <= 260) {
-        // render a tile
+        // during sequential execution disallow program from accessing ppu memory, 
+        //1 scanline - 32 tiles (30 from current and 2 for next scanline)
+        int tile;
+        sprite_evaluation(graphics, tile, line);
+        for (tile = 2; tile < 32; tile++)
+            draw_tile_from_scanline(graphics, tile, line); //should return data
+
+        for (tile = 0; tile < 2; tile++)
+             draw_tile_from_scanline(graphics, tile, line + 1);
     }
     else if (line == 261) {
         // do nothing
@@ -89,10 +100,10 @@ void scanline(struct graphics* graphics, int line) {
     }
 }
 
-// 0 <= x <= 32   - 1 for tile
-// 0 <= y <= 240  - 1 for scanline
+// 0 <= x < 32   - 1 for tile
+// 0 <= y < 240  - 1 for scanline
 
-void draw_tile_from_scanline(struct graphics* graphics, int x, int y) 
+void  draw_tile_from_scanline(struct graphics* graphics, int x, int y) 
 {
 
     // fetch
@@ -101,7 +112,7 @@ void draw_tile_from_scanline(struct graphics* graphics, int x, int y)
     //pick a tile byte (0-959)
     int tile_offset = ((y/8) * SCREEN_WIDTH_TILES) + x;
 
-    uint16_t mem_off = graphics->nametable + offset;
+    uint16_t mem_off = graphics->nametable + tile_offset;
 
     assert(mem_off >= NAMETABLE1 && mem_off < ATTRTABLE1
             && mem_off < NES_V_MEM_SIZE);
@@ -110,42 +121,65 @@ void draw_tile_from_scanline(struct graphics* graphics, int x, int y)
 
     uint16_t attr_table_pt = NAME_TO_ATTR(graphics->nametable) + (tile_offset/16);
 
-    uint8_t pallete_1 = graphics->memory[attr_table_pt^0x1] >> ((offset % 16) / 4) & 0x3);
+    uint8_t pallete_picker = graphics->memory[attr_table_pt^0x1] >> (((tile_offset % 16) / 4) & 0x3);
 
-    assert(pallete_1 >= 0x0 && pallete_1 <= 0x3)
+    assert(pallete_picker >= 0x0 && pallete_picker <= 0x3);
 
-    uint8_t tile_p1 = graphics->memory[tile_pt^0x1];
-    uint8_t tile_p2 = graphics->memory[(tile_pt + 1) 0x1];
-    //... continue getting bytes, 16 total, overlay them to get color
+    uint8_t tile_pt_low = graphics->bg_pattern_table + tile_pt;
+    uint8_t tile_pt_high = tile_pt_low + 8;
+    
 
-    //get upper pallete from attribute table
-    // the attribute table has 64 bytes (1 byte has 4 tiles)
-    //a byte holds info for 16 tiles
-    mem_off = ATTRTABLE1 + offset / 16; //need to find 2 bits inside a byte(i think,. check table again)
-    // take 2 bits for  palete number
-    // shifts the byte, until it reaches the corresponded position to mask, (16 possible bytes for 4 positions)
-    // this determines the background pallete to use
-    mem_off >>= (( offset % 16 ) / 4) & 0x3;
+    // this defines a sprite and colors, this shouldnt be done on runtime, 
+    // the sprite should have already been created
+    // Im doing this 1 line at a time, which is slower, but closer to the hardware
+
+    uint8_t tile_line_low = graphics->memory[tile_pt_low + (y % 30)]; // only needs 1 line from the tile
+    uint16_t tile_line_high = graphics->memory[tile_pt_high + (y % 30)];
+    int tile_line = (tile_line_high << 8) | tile_line_low;
+
 
     uint16_t palette;
-    switch (mem_off)
+    switch (pallete_picker)
     {
-        case 0x1:   palette = BCKGRND_PALLETE0; break;
-        case 0x2:   palette = BCKGRND_PALLETE1; break;
-        case 0x3:   palette = BCKGRND_PALLETE2; break;
-        case 0x4:   palette = BCKGRND_PALLETE3; break;
+        case 0x0:   palette = BCKGRND_PALLETE0; break;
+        case 0x1:   palette = BCKGRND_PALLETE1; break;
+        case 0x2:   palette = BCKGRND_PALLETE2; break;
+        case 0x3:   palette = BCKGRND_PALLETE3; break;
     }
 
-    int color = 0;
+    int color = 0, color_num;
     int i;
     for (i=0; i<8; i++) {// move in width
-        color = get_pallete_color(graphics, palette,
-                    ((graphics->memory[tile_pt + (y % 32)] >> i) & 0x1) << 1
-                    | ((graphics->memory[tile_pt + (y % 32)] >> i) & 0x1)
-                    );
-            draw_pixel(graphics, x+i, y, color);
-    //tile_pt++;  // ?? need to calculate remainder directly depends on y (y % 32)
+        color_num =  ((tile_line >> i) & 0x1) << 1 | ((tile_line >> i) & 0x1);
+        color = get_pallete_color(graphics, palette, color_num);
+        draw_pixel(graphics, x+i, y, color);
     }
+}
+
+
+//
+//      For each scanline evaluates the sprites in oam memory, taking up to 8 sprites it finds,
+//  copying them to the secondary oam (needs to check the pixels to draw).
+//
+//  - sprite overflow flag is not checked
+//
+
+void sprite_evaluation(struct graphics *graphics, int x, int y)
+{
+    #define OAM_SPRITE_SIZE 4
+
+    //clear secondary oam
+    memset(graphics->oam2, 0, NES_OAM2_MEM_SIZE);
+    int oam2_i = 0;
+
+    int sprite_i; 
+    for (sprite_i=0; sprite_i < 64 || oam2_i < 8; sprite_i++){
+        //y_addr taken from byte 0
+        uint8_t y_addr = graphics->oam[sprite_i * OAM_SPRITE_SIZE];
+        if (y_addr >= y && y_addr + 8 < y)  //sprite has 8 pixel range?
+            memcpy(&graphics->oam2[oam2_i++], &graphics->oam[sprite_i], 4);
+    }
+
 }
 
 int update_screen(struct graphics * graphics)

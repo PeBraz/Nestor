@@ -2,7 +2,6 @@
 #include "nestor.h"
 
 
-
 void implied(struct nestor * nes, void(*operation)(struct nestor *))
 {
     operation(nes);
@@ -20,12 +19,14 @@ void absolute(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 
     //loads 2 bytes after the instruction
     uint16_t byte_pos = nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8);
+    printf("$%d\n", byte_pos);
     operation(nes, &(nes->memory[byte_pos]));
 }
 
 void jmp_absolute(struct nestor * nes, void(*operation)(struct nestor *,uint16_t))
 {
     uint16_t byte_pos = nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8);
+    printf("$%d\n", byte_pos);
     operation(nes, byte_pos);
 }
 

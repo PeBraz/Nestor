@@ -47,6 +47,8 @@
 
 
 #define NES_V_MEM_SIZE 16384
+#define NES_OAM_MEM_SIZE 256 // (64 * 4)
+#define NES_OAM2_MEM_SIZE 32 // (8 * 4)
 
 enum nes_mirror {
     VERTICAL,
@@ -61,6 +63,10 @@ struct graphics
     SDL_Window * window;
     enum nes_mirror mirror;
     uint8_t memory[NES_V_MEM_SIZE];
+    uint8_t oam[NES_OAM_MEM_SIZE];
+    uint8_t oam2[NES_OAM2_MEM_SIZE];
+    uint16_t nametable;
+    uint16_t bg_pattern_table;
 
 };
 
