@@ -1,5 +1,3 @@
-#define NESTOR_DEBUG
-#define NESTOR_BREAK
 
 
 #include "nestor.h"
@@ -8,8 +6,8 @@
 
 int main(int arg, char * argv[])
 {
-    
-    char * game_path = "../Arkanoid (USA).nes";
+    //"../nestest.nes"
+    char * game_path = "../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();
     int err = nestor_cartridge(&Nes, game_path);
@@ -24,9 +22,7 @@ int main(int arg, char * argv[])
         return 1;
     }*/
     while (true) {
-#ifdef NESTOR_BREAK
-        getchar();
-#endif        
+    
         emulate(&Nes);
     //  update_screen(&Nes.video);    
     //  graphics(Nes);

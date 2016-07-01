@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include "graphi.h"
 
-#define DEBUG
 
 
 #define NES_MEM_SIZE 65536
@@ -115,7 +114,7 @@
 #define TYA 0x98
 #define STA_ABSOLUTE_Y 0x99
 #define TXS 0x9A
-#define STA_ABSOLUTE_X 0x90
+#define STA_ABSOLUTE_X 0x9D
 #define LDY_IMMEDIATE 0xA0
 #define LDA_INDIRECT_X 0xA1
 #define LDX_IMMEDIATE 0xA2
@@ -163,7 +162,7 @@
 #define CPX_ZERO_PAGE 0xE4
 #define SBC_ZERO_PAGE 0xE5
 #define INC_ZERO_PAGE 0xE6
-#define INX 0x08
+#define INX 0xE8
 #define SBC_IMMEDIATE 0xE9
 #define NOP 0xEA 
 #define CPX_ABSOLUTE 0xEC
@@ -188,22 +187,53 @@ struct nestor {
         uint8_t x;
         uint8_t y;
         uint8_t status;
+      /*  struct {
+            uint8_t negative : 1;
+            uint8_t overflow : 1;
+            uint8_t break : 1;
+            uint8_t interrupt : 1;
+            uint8_t decimal : 1;
+            uint8_t zero : 1;
+            uint8_t carry : 1;
+        }status;*/
         uint16_t pc;
         uint16_t sp;
     } regs;
 };
 
-#ifdef DEBUG 
+#ifdef NESTOR_DEBUG 
+/*
+#define DBG_REGS(nes) fprintf("[A:%x X:%x Y:%x]",\
+     nes->regs.acc, nes->regs.x, nes->regs.y); 
+*/
+     /*
+#define DBG_CPU(nes) fprintf(stderr, "DEBUG: [A:%x X:%x Y:%x]-[%c%c%c%c%c%c%c]\n",\
+                                            nes->regs.acc, nes->regs.x, nes->regs.y,\
+                                            (nes->regs.status & NEGATIVE_FLAG)? 'N' : '_',\
+                                            (nes->regs.status & OVERFLOW_FLAG)? 'O' : '_',\
+                                            (nes->regs.status & BREAK_FLAG)? 'B' : '_',\
+                                            (nes->regs.status & INTERRUPT_FLAG)? 'I' : '_',\
+                                            (nes->regs.status & DECIMAL_FLAG)? 'D' : '_',\
+                                            (nes->regs.status & ZERO_FLAG)? 'Z' : '_',\
+                                            (nes->regs.status & CARRY_FLAG)? 'C' : '_');
+*/
+#define DBG_CPU(nes)// fprintf(stderr, "DEBUG: [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n",\
+                      //                      nes->regs.acc, nes->regs.x, nes->regs.y,\
+                        //                    nes->regs.status, nes->regs.sp);
 
-#define DBG(msg) fprintf(stderr, "Debug [%s:%d]: " # msg, __FILE__, __LINE__); 
-#define DBGF(msg,...) fprintf(stderr, "Debug [%s:%d]: " # msg, __FILE__, __LINE__, __VA_ARGS__);
+#define DBG(msg) //fprintf(stderr, "DEBUG [%s:%d]: %s\n",  __FILE__, __LINE__, msg); 
+#define DBGF(msg,...) //fprintf(stderr, "DEBUG [%s:%d]: " msg "\n", __FILE__, __LINE__, __VA_ARGS__);
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
-                    printf("DEBUG: %s - %s\n", #OP, #MODE);\
+                    fprintf(stderr, "DEBUG: %s - %s PC:%x [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n", #OP, #MODE, \
+                                        nes->regs.pc, nes->regs.acc, nes->regs.x, nes->regs.y,\
+                                            nes->regs.status, nes->regs.sp);\
                     MODE(nes, OP);\
                 }
+            //fprintf(stderr, "DEBUG [%s:%d]: %s - %s\n", __FILE__, __LINE__, #OP, #MODE);
 #else
-#define DBG(msg, ...)
+//#define DBG(msg)
+//#define DBGF(msg, ...)
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
                     MODE(nes, OP);\

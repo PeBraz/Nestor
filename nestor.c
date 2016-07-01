@@ -196,7 +196,8 @@ struct nestor nestor_init()
 	struct nestor nes = (struct nestor){
 		.opcodes = {NULL},
 		.regs = {
-			.sp = 0x01FF
+			.status = 0x24,
+			.sp = 0x00FD
 		}
 	};
 
@@ -396,9 +397,25 @@ void emulate(struct nestor * nes)
 	uint8_t op = nes->memory[nes->regs.pc];
 
 	if (nes->opcodes[op] != NULL) {
+
+
+#ifdef NESTOR_DEBUG
+		DBGF("[M:%02x]: %02X", nes->regs.pc, op);
 		nes->opcodes[op](nes);
+		DBG_CPU(nes);
+		//DBG_FLAGS(nes->regs.status);
+	} else {
+		DBGF("[M:%02x]: %02x not found\n", nes->regs.pc, op);
+		getchar();
 	}
-	else printf("%02x: not found\n", op);
+	fprintf(stderr, "---------------------------------------\n" );
+#else 
+	nes->opcodes[op](nes);
+	}
+#endif
+#ifdef NESTOR_BREAK
+	getchar();
+#endif
 
 	nes->regs.pc++;
 }
@@ -423,8 +440,9 @@ int nestor_cartridge(struct nestor *nes, char *game)
 	if (game_size > NES_MEM_SIZE)
 		return 1;
 
-	fread(nes->memory, sizeof(uint8_t), game_size, f);
 
+	fread(nes->memory + 0x4200, sizeof(uint8_t), game_size, f);
+	nes->regs.pc = 0x4200;
 
 	nestor_cartridge_header(nes);
 
@@ -438,19 +456,18 @@ int nestor_cartridge(struct nestor *nes, char *game)
 
 int nestor_cartridge_header(struct nestor *nes) 
 {
-	nes->regs.pc += NES_ROM_HEADER_SIZE;
 
 
-	if (nes->memory[1] != 0x45 	//N
-		|| nes->memory[0] != 0x4e	//E
-		|| nes->memory[3] != 0x1a	//S
-		|| nes->memory[2] != 0x53)	//
+	if (nes->memory[nes->regs.pc + 1] != 0x45 	//N
+		|| nes->memory[nes->regs.pc + 0] != 0x4e	//E
+		|| nes->memory[nes->regs.pc + 3] != 0x1a	//S
+		|| nes->memory[nes->regs.pc + 2] != 0x53)	//
 		return 1;
 
-	int prg_rom_size = (int)nes->memory[5] * 16;
-	int chr_rom_size = (int)nes->memory[4] * 8;
+	int prg_rom_size = (int)nes->memory[nes->regs.pc + 5] * 16;
+	int chr_rom_size = (int)nes->memory[nes->regs.pc + 4] * 8;
 
-	uint8_t flag_6 = nes->memory[7];
+	uint8_t flag_6 = nes->memory[nes->regs.pc + 7];
 
 	if (INES_IS_VERTICAL_MIRROR(flag_6))
 		nes->video.mirror = VERTICAL;
@@ -463,15 +480,16 @@ int nestor_cartridge_header(struct nestor *nes)
 	int prg_ram = flag_6 & 0x02;
 	int trainer_store = flag_6 & 0x04;
 
-	uint8_t flag_7 = nes->memory[6];
+	uint8_t flag_7 = nes->memory[nes->regs.pc + 6];
 
 	uint8_t mapper_num = ((flag_6 & 0xF0) >> 8) | (flag_7 & 0xF0);
 
 	int i;
 	for (i=8; i < 16; i++)
-		if (nes->memory[i] != 0x0) 
+		if (nes->memory[nes->regs.pc + i] != 0x0) 
 			return 1;
 
+	nes->regs.pc += NES_ROM_HEADER_SIZE;
 
 	return 0;
 }

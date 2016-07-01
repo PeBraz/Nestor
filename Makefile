@@ -1,21 +1,22 @@
 CC=gcc
 XNAME=nestor
-
-all: op.o op_modes.o nestor.o main.o graphi.o
-	${CC} -o ${XNAME} op.o op_modes.o nestor.o graphi.o main.o -lSDL2
+MACROS=-DNESTOR_DEBUG -DNESTOR_BREAK 
+MFILE=-imacros macros.h
+all: main.o op.o op_modes.o nestor.o main.o graphi.o
+	${CC} -o ${XNAME} main.o op.o op_modes.o nestor.o graphi.o  -lSDL2
 
 main.o:
-	${CC} -g -c main.c
+	${CC} ${MFILE} -g -c main.c
 nestor.o:
-	${CC} -g -c nestor.c
+	${CC} ${MFILE} -g -c nestor.c
 op_modes.o:
-	${CC} -g -c op_modes.c
+	${CC} ${MFILE} -g -c op_modes.c
 op.o:
-	${CC} -g -c op.c
+	${CC} ${MFILE} -g -c op.c
 op_tests.o:
-	${CC} -g -c op_tests.c
+	${CC} ${MFILE} -g -c op_tests.c
 graphi.o:
-	${CC} -g -c graphi.c
+	${CC} ${MFILE} -g -c graphi.c
 
 val: all
     valgrind --leak-check=full ./${XNAME}

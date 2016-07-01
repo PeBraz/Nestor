@@ -264,9 +264,17 @@ int test_bit_2()
     return 0;
 }
 
-
+/*
+int test_sbc() {
+      struct nestor nes = (struct nestor){.regs={0}};
+      nes.regs.status = 0xE5;
+      nes.regs.acc = 0x40;
+      nes.me
+}
+*/
 int main()
 {
+    /*
     TEST(test_immediate);
     TEST(test_absolute);
     TEST(test_adc);
@@ -280,7 +288,7 @@ int main()
     TEST(test_asl_2);
     TEST(test_bit_1);
     TEST(test_bit_2);
-
+*/
 
     return 0;
 }
