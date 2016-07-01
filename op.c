@@ -274,7 +274,7 @@ void bvs(struct nestor * nes, uint8_t val)
 }
 
 
-void brk(struct nestor * nes) 
+void nes_brk(struct nestor * nes) 
 {
     nestor_st_push(nes, (uint8_t)((nes->regs.pc + 2) >> 8 )); //program counter high
     nestor_st_push(nes, (uint8_t)(nes->regs.pc + 2));   //program counter low

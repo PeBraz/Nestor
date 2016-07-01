@@ -280,7 +280,7 @@ void bmi(struct nestor *, uint8_t);
 void bpl(struct nestor *, uint8_t);
 void bvc(struct nestor *, uint8_t);
 void bvs(struct nestor *, uint8_t);
-void brk(struct nestor *);
+void nes_brk(struct nestor *);
 void clc(struct nestor *);
 void cld(struct nestor *);
 void cli(struct nestor *);

@@ -1,2 +1,2 @@
 #define NESTOR_DEBUG
-#define NESTOR_BREAK
+//#define NESTOR_BREAK

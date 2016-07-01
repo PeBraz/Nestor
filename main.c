@@ -1,5 +1,5 @@
 
-
+#include <unistd.h>
 #include "nestor.h"
 //#include "graphi.h"
 
@@ -7,7 +7,8 @@
 int main(int arg, char * argv[])
 {
     //"../nestest.nes"
-    char * game_path = "../Donkey Kong (World) (Rev A).nes";
+    char * game_path = "../Arkanoid (USA).nes";
+    //"../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();
     int err = nestor_cartridge(&Nes, game_path);
@@ -22,8 +23,9 @@ int main(int arg, char * argv[])
         return 1;
     }*/
     while (true) {
-    
+        usleep(10000);
         emulate(&Nes);
+
     //  update_screen(&Nes.video);    
     //  graphics(Nes);
     //  sounds(Nes);

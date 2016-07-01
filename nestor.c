@@ -35,7 +35,7 @@ NES_DEF(bpl, relative);
 NES_DEF(bvc, relative);
 NES_DEF(bvs, relative);
 
-NES_DEF(brk, implied);
+NES_DEF(nes_brk, implied);
 
 NES_DEF(bit, zero_page);
 NES_DEF(bit, absolute);
@@ -234,7 +234,7 @@ struct nestor nestor_init()
 	nes.opcodes[BVC] = nes_call_bvc_relative;
 	nes.opcodes[BVS] = nes_call_bvs_relative;
 
-	nes.opcodes[BRK] = nes_call_brk_implied;
+	nes.opcodes[BRK] = nes_call_nes_brk_implied;
 	
 	nes.opcodes[BIT_ABSOLUTE] = nes_call_bit_absolute;
 	nes.opcodes[BIT_ZERO_PAGE] = nes_call_bit_zero_page;
@@ -408,7 +408,6 @@ void emulate(struct nestor * nes)
 		DBGF("[M:%02x]: %02x not found\n", nes->regs.pc, op);
 		getchar();
 	}
-	fprintf(stderr, "---------------------------------------\n" );
 #else 
 	nes->opcodes[op](nes);
 	}
