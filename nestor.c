@@ -398,12 +398,9 @@ void emulate(struct nestor * nes)
 
 	if (nes->opcodes[op] != NULL) {
 
-
 #ifdef NESTOR_DEBUG
-		DBGF("[M:%02x]: %02X", nes->regs.pc, op);
 		nes->opcodes[op](nes);
 		DBG_CPU(nes);
-		//DBG_FLAGS(nes->regs.status);
 	} else {
 		DBGF("[M:%02x]: %02x not found\n", nes->regs.pc, op);
 		getchar();
@@ -428,6 +425,13 @@ uint8_t nestor_set_byte(struct nestor * nes, uint16_t p_byte, uint8_t val)
 }
 
 
+#define INES_IS_VERTICAL_MIRROR(flag) ((flag & 0x09) == 0x0)
+#define INES_IS_HORIZONTAL_MIRROR(flag) ((flag & 0x09) == 0x1)
+#define INES_IS_FOUR_SCREEN(flag) ((flag & 0x08) == 0x8)
+#define PRG_ROM1_OFFSET 0x8000
+#define PRG_ROM2_OFFSET 0xC000
+#define RESET_INTERRUPT 0xFFFC
+
 int nestor_cartridge(struct nestor *nes, char *game) 
 {
 	FILE *f = fopen(game, "r");
@@ -436,37 +440,31 @@ int nestor_cartridge(struct nestor *nes, char *game)
 	int game_size = ftell(f);
 	rewind(f);
 
-	if (game_size > NES_MEM_SIZE)
+	//if (game_size > NES_MEM_SIZE)
+	//	return 1;
+
+
+	uint8_t header_buffer[NES_ROM_HEADER_SIZE];  
+
+	fread(header_buffer, sizeof(uint8_t), NES_ROM_HEADER_SIZE, f);
+
+	if (header_buffer[1] != 0x45 	//N
+		|| header_buffer[0] != 0x4e	//E
+		|| header_buffer[3] != 0x1a	//S
+		|| header_buffer[2] != 0x53)	//
 		return 1;
 
 
-	fread(nes->memory + 0x4200, sizeof(uint8_t), game_size, f);
-	nes->regs.pc = 0x4200;
+	int prg_rom_size = (int)header_buffer[5] * 16384;
 
-	nestor_cartridge_header(nes);
+	fread(nes->memory + PRG_ROM1_OFFSET, sizeof(uint8_t), prg_rom_size, f);
+	memcpy(nes->memory + PRG_ROM2_OFFSET, nes->memory + PRG_ROM1_OFFSET, prg_rom_size);
 
-	return 0;
-}
-
-
-#define INES_IS_VERTICAL_MIRROR(flag) ((flag & 0x09) == 0x0)
-#define INES_IS_HORIZONTAL_MIRROR(flag) ((flag & 0x09) == 0x1)
-#define INES_IS_FOUR_SCREEN(flag) ((flag & 0x08) == 0x8)
-
-int nestor_cartridge_header(struct nestor *nes) 
-{
+	int chr_rom_size = (int)header_buffer[4] * 8192;
+	//read more directly to ppu
 
 
-	if (nes->memory[nes->regs.pc + 1] != 0x45 	//N
-		|| nes->memory[nes->regs.pc + 0] != 0x4e	//E
-		|| nes->memory[nes->regs.pc + 3] != 0x1a	//S
-		|| nes->memory[nes->regs.pc + 2] != 0x53)	//
-		return 1;
-
-	int prg_rom_size = (int)nes->memory[nes->regs.pc + 5] * 16;
-	int chr_rom_size = (int)nes->memory[nes->regs.pc + 4] * 8;
-
-	uint8_t flag_6 = nes->memory[nes->regs.pc + 7];
+	uint8_t flag_6 = header_buffer[7];
 
 	if (INES_IS_VERTICAL_MIRROR(flag_6))
 		nes->video.mirror = VERTICAL;
@@ -479,16 +477,18 @@ int nestor_cartridge_header(struct nestor *nes)
 	int prg_ram = flag_6 & 0x02;
 	int trainer_store = flag_6 & 0x04;
 
-	uint8_t flag_7 = nes->memory[nes->regs.pc + 6];
+	uint8_t flag_7 =header_buffer[6];
 
 	uint8_t mapper_num = ((flag_6 & 0xF0) >> 8) | (flag_7 & 0xF0);
 
 	int i;
 	for (i=8; i < 16; i++)
-		if (nes->memory[nes->regs.pc + i] != 0x0) 
+		if (header_buffer[i] != 0x0) 
 			return 1;
 
-	nes->regs.pc += NES_ROM_HEADER_SIZE;
+	nes->regs.pc = nes->memory[RESET_INTERRUPT] | (nes->memory[RESET_INTERRUPT + 1] << 8);
 
 	return 0;
 }
+
+

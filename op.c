@@ -281,7 +281,6 @@ void nes_brk(struct nestor * nes)
 
     nes->regs.status |= BREAK_FLAG;
     nestor_st_push(nes, nes->regs.status);  //status register
-
     nes->regs.pc = (nes->memory[0xFFFF] << 8) | nes->memory[0xFFFE];
 }
 

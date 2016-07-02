@@ -6,8 +6,10 @@
 
 int main(int arg, char * argv[])
 {
-    //"../nestest.nes"
-    char * game_path = "../Arkanoid (USA).nes";
+    //"../nestest.nes";
+    //  "../official_only.nes";
+    char * game_path =  "../Donkey Kong (World) (Rev A).nes";
+       // "../Arkanoid (USA).nes";
     //"../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();
@@ -23,7 +25,7 @@ int main(int arg, char * argv[])
         return 1;
     }*/
     while (true) {
-        usleep(10000);
+        //usleep(1000);
         emulate(&Nes);
 
     //  update_screen(&Nes.video);    

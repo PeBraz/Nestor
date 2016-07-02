@@ -221,8 +221,8 @@ struct nestor {
                       //                      nes->regs.acc, nes->regs.x, nes->regs.y,\
                         //                    nes->regs.status, nes->regs.sp);
 
-#define DBG(msg) //fprintf(stderr, "DEBUG [%s:%d]: %s\n",  __FILE__, __LINE__, msg); 
-#define DBGF(msg,...) //fprintf(stderr, "DEBUG [%s:%d]: " msg "\n", __FILE__, __LINE__, __VA_ARGS__);
+#define DBG(msg) fprintf(stderr, "DEBUG [%s:%d]: %s\n",  __FILE__, __LINE__, msg); 
+#define DBGF(msg,...) fprintf(stderr, "DEBUG [%s:%d]: " msg "\n", __FILE__, __LINE__, __VA_ARGS__);
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
                     fprintf(stderr, "DEBUG: %s - %s PC:%x [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n", #OP, #MODE, \
