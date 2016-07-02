@@ -461,7 +461,8 @@ int nestor_cartridge(struct nestor *nes, char *game)
 	memcpy(nes->memory + PRG_ROM2_OFFSET, nes->memory + PRG_ROM1_OFFSET, prg_rom_size);
 
 	int chr_rom_size = (int)header_buffer[4] * 8192;
-	//read more directly to ppu
+	
+	fread(nes->video->memory, sizeof(uint8_t), chr_rom_size, f);
 
 
 	uint8_t flag_6 = header_buffer[7];
