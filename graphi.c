@@ -67,6 +67,53 @@ sdl_failure:
     return (struct graphics) {.window=NULL, .pallete={0}};
 }
 
+//
+// Creates a window with the patterns in memory
+//
+
+#define GREY_1_PIX 0x01000000
+#define GREY_2_PIX 0x01494949
+#define GREY_3_PIX 0x01BABABA
+#define GREY_4_PIX 0x01111111
+
+SDL_Window * ppu_mem_view(struct graphics *g) {
+
+    uint32_t my_pixels[] = {GREY_1_PIX, GREY_2_PIX, GREY_3_PIX, GREY_4_PIX};
+
+    SDL_Window *window;
+    SDL_Init(SDL_INIT_EVERYTHING);
+    window = SDL_CreateWindow( "PPU-VIEW",
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        16 * 8 * 2, // 2 tables 16 tiles 8 pixels
+        16 * 8,
+        SDL_WINDOW_BORDERLESS);
+
+    /* For each right/left tile*/
+    for (int tile_i=0; tile_i < 256; tile_i++) {
+        /* For each byte in tile*/
+        for (int byte_i=0; byte_i < 8; byte_i++) {
+            uint8_t patt_1 = g->memory[tile_i+byte_i];
+            uint8_t patt_2 = g->memory[tile_i+byte_i+8]; 
+
+            /* For each bit*/
+            for (int pix_i=0; pix_i < 8; pix_i++) {
+
+                int patt_id = ((patt_0 >> pix_i) & 0x1) | (((patt_1 >> pix_i) & 0x1) << 1);
+
+                SDL_LockSurface(window);
+                uint32_t *pixels = (uint32_t*)surface->pixels;
+                pixels[(y * surface->w) + x] = my_pixels[patt_id];
+                SDL_UnlockSurface(window);
+            }
+        }
+    }
+    SDL_UpdateWindowSurface(window);
+    return window;
+}
+
+
+
 void free_graphics(struct graphics * graphics)
 {
     SDL_DestroyWindow(graphics->window);
