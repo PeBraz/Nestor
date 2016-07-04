@@ -11,10 +11,18 @@
 #define SCREEN_WIDTH_TILES 32
 #define SCREEN_HEIGHT_TILES 30
 
-#define NAMETABLE1 0x2000
-#define ATTRTABLE1 0x23C0
-#define PATTTABLE1 0x0000
-#define PATTTABLE2 0x1000
+#define NAMETABLE0 0x2000
+#define NAMETABLE1 0x2400
+#define NAMETABLE2 0x2800
+#define NAMETABLE3 0x2C00
+
+#define ATTRTABLE0 0x23C0
+#define ATTRTABLE1 0x27C0
+#define ATTRTABLE2 0x2BC0
+#define ATTRTABLE3 0x2FC0
+
+#define PATTTABLE0 0x0000
+#define PATTTABLE1 0x1000
 
 #define BCKGRND_PALLETE0 0x3F00
 #define BCKGRND_PALLETE1 0x3F05
@@ -67,52 +75,147 @@ sdl_failure:
     return (struct graphics) {.window=NULL, .pallete={0}};
 }
 
-//
-// Creates a window with the patterns in memory
-//
+
 
 #define GREY_1_PIX 0x01000000
 #define GREY_2_PIX 0x01494949
 #define GREY_3_PIX 0x01BABABA
 #define GREY_4_PIX 0x01111111
 
-SDL_Window * ppu_mem_view(struct graphics *g) {
+#define TILES_WIDTH 16
+#define TILES_HEIGHT 16
+#define PATT_TABLE_WIDTH 128 // 16 * 8
+#define PATT_TABLE_HEIGHT 128 // 16 * 8
+#define PATT_TILES_COUNT 256   // 4096B = 256tiles * 16 bytes each
 
+
+//
+// Initialize pattern tables, retrieving the tiles from ppu ram. 
+//
+void init_pattern_table(struct graphics *g) {
+
+    g->pattern0 = malloc(sizeof(SDL_Surface*) * PATT_TILES_COUNT);
+    g->pattern1 = malloc(sizeof(SDL_Surface*) * PATT_TILES_COUNT);
+    int i;
+    for (i=0; i < PATT_TILES_COUNT; i++) {
+        g->pattern0[i] = SDL_CreateRGBSurface(0, 
+                                                8 * g->pixel.width, 
+                                                8 * g->pixel.height, 
+                                                32, 0, 0, 0, 0);
+        g->pattern1[i] = SDL_CreateRGBSurface(0, 
+                                                8 * g->pixel.width, 
+                                                8 * g->pixel.height, 
+                                                32, 0, 0, 0, 0);
+    }
+}
+
+void destroy_pattern_table(struct graphics *g) 
+{ 
+    int i;
+    for (i=0; i < PATT_TILES_COUNT; i++) {
+        SDL_FreeSurface(g->pattern0[i]);
+        SDL_FreeSurface(g->pattern1[i]);
+    }
+    free(g->pattern0);
+    free(g->pattern1);
+}
+
+void __update_pattern_table(struct graphics *, SDL_Surface **, int);
+void update_pattern_table(struct graphics *g)
+{
+    __update_pattern_table(g, g->pattern0, 0x0000);
+    __update_pattern_table(g, g->pattern1, 0x1000);
+}
+
+void __update_pattern_table(struct graphics *g, SDL_Surface **patt, int mem_offset) 
+{
     uint32_t my_pixels[] = {GREY_1_PIX, GREY_2_PIX, GREY_3_PIX, GREY_4_PIX};
 
-    SDL_Window *window;
-    SDL_Init(SDL_INIT_EVERYTHING);
-    window = SDL_CreateWindow( "PPU-VIEW",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        16 * 8 * 2, // 2 tables 16 tiles 8 pixels
-        16 * 8,
-        SDL_WINDOW_BORDERLESS);
-
-    SDL_Surface * surface = SDL_GetWindowSurface(window);
-    /* For each right/left tile*/
     int tile_i, byte_i, pix_i;
-    for (tile_i=0; tile_i < 256; tile_i++) {
-        /* For each byte in tile*/
-        
-        for (byte_i=0; byte_i < 8; byte_i++) {
-            uint8_t patt_1 = g->memory[tile_i+byte_i];
-            uint8_t patt_2 = g->memory[tile_i+byte_i+8]; 
-
+    for (tile_i=0; tile_i < PATT_TILES_COUNT; tile_i++) {
+        for (byte_i=0; byte_i < 16; byte_i += 2) {
+            uint8_t plane_1 = g->memory[mem_offset + tile_i+byte_i+1];
+            uint8_t plane_2 = g->memory[mem_offset + tile_i+byte_i]; 
             /* For each bit*/
             for (pix_i=0; pix_i < 8; pix_i++) {
 
-                int patt_id = ((patt_1 >> pix_i) & 0x1) | (((patt_2 >> pix_i) & 0x1) << 1);
-                int y = ((tile_i / 16) * 8) + byte_i; // 
-                int x = ((tile_i % 16) * 8) + (8-pix_i); 
-                SDL_LockSurface(surface);
-                uint32_t *pixels = (uint32_t*)surface->pixels;
-                pixels[(y * surface->w) + x] = my_pixels[patt_id];
-                SDL_UnlockSurface(surface);
+                int patt_id = ((plane_1 >> pix_i) & 0x1) | (((plane_2 >> pix_i) & 0x1) << 1);
+                int y = byte_i/2 * g->pixel.height;  
+                int x = (7-pix_i) * g->pixel.width; 
+
+                SDL_Rect * rect = &(SDL_Rect){x, y, g->pixel.width, g->pixel.height}; 
+                SDL_FillRect(patt[tile_i], rect, my_pixels[patt_id]);
             }
         }
     }
+}
+
+SDL_Surface *surface_from_patterns(struct graphics *g, SDL_Surface ** patterns) 
+{
+
+    int w, h;
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, PATT_TABLE_WIDTH * g->pixel.width, 
+        PATT_TABLE_HEIGHT*g->pixel.height, 32,0,0,0,0);
+
+    int tile_width = 8*g->pixel.width;
+    int tile_height = 8*g->pixel.height;
+    int i;
+    for (i = 0; i < PATT_TILES_COUNT; i++) {
+        SDL_Rect * dst_rect = 
+            &(SDL_Rect){  
+                .x=tile_width * (i % TILES_WIDTH),
+                .y=tile_height * (i / TILES_WIDTH),
+                .w=tile_width,
+                .h=tile_height
+            };
+        SDL_BlitSurface(patterns[i], NULL, surface, dst_rect);
+    }
+    return surface;
+}
+
+//
+// Creates a window with the patterns in memory
+//
+SDL_Window * ppu_mem_view(struct graphics *g) {
+
+    int pixel_size = 3;
+
+    g->pixel.width = g->pixel.height = pixel_size;
+    int win_width = pixel_size * PATT_TABLE_WIDTH * 2;
+    int win_height = pixel_size * PATT_TABLE_HEIGHT;
+
+    SDL_Init(SDL_INIT_EVERYTHING);
+
+    SDL_Window *window = SDL_CreateWindow( "PPU-VIEW",
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        win_width,
+        win_height,
+        SDL_WINDOW_BORDERLESS);
+
+    SDL_Surface * main_surface = SDL_GetWindowSurface(window);
+
+    init_pattern_table(g);
+    update_pattern_table(g);
+
+    int tile_width = 8*g->pixel.width;
+    int tile_height = 8*g->pixel.height;
+
+    SDL_Surface *patt0_surface = surface_from_patterns(g, g->pattern0);
+    SDL_Surface *patt1_surface = surface_from_patterns(g, g->pattern1);
+
+
+    SDL_BlitSurface(patt0_surface, NULL, main_surface, 
+        &(SDL_Rect){0,0, PATT_TABLE_WIDTH * g->pixel.width, PATT_TABLE_HEIGHT * g->pixel.height});
+
+    SDL_BlitSurface(patt1_surface, NULL, main_surface, 
+        &(SDL_Rect){PATT_TABLE_WIDTH * g->pixel.width, 0, PATT_TABLE_WIDTH * g->pixel.width, PATT_TABLE_HEIGHT * g->pixel.height});
+   
+    SDL_FreeSurface(patt0_surface);
+    SDL_FreeSurface(patt1_surface);
     SDL_UpdateWindowSurface(window);
+
+    destroy_pattern_table(g);
     return window;
 }
 
@@ -326,6 +429,25 @@ void draw_pixel(struct graphics * graphics, int x, int y, int color)
                                                     color  % 10)
     );
 
+}
+
+#define PPUCTRL_NAMETABLE_BITS 0x03 
+#define PPUCTRL_VRAM_INC_BITS 0x04
+#define PPUCTRL_SPRITE_ADDR_BITS 0x08
+#define PPUCTRL_BG_ADDR_BITS 0x10
+#define PPUCTRL_SPRITE_SIZE_BITS 0x20
+#define PPUCTRL_MS_SELECT_BITS 0x40
+#define PPUCTRL_VBLANK_NMI 0x80
+
+void access_ppuctrl (struct graphics *g, uint8_t ppuctrl) 
+{
+    g->nametable = (uint16_t[]){NAMETABLE0, NAMETABLE1, NAMETABLE2, NAMETABLE3}[ppuctrl & PPUCTRL_NAMETABLE_BITS];
+    g->vram_inc = (ppuctrl & PPUCTRL_VRAM_INC_BITS)? 32 : 1;
+    g->sprite_addr = (ppuctrl & PPUCTRL_SPRITE_ADDR_BITS)? PATTTABLE1: PATTTABLE0;
+    g->bg_addr = (ppuctrl & PPUCTRL_BG_ADDR_BITS)? PATTTABLE1: PATTTABLE0;
+    g->sprite_height = (ppuctrl & PPUCTRL_SPRITE_SIZE_BITS)? 16: 8;
+    g->ppu_ms_select = (ppuctrl & PPUCTRL_MS_SELECT_BITS)? 1:0; //??? no ideia what this should do
+    g->vblank_nmi = (ppuctrl & PPUCTRL_VBLANK_NMI)? 1:0;
 }
 
 

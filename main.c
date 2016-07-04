@@ -14,12 +14,15 @@ int main(int arg, char * argv[])
     //"../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();
+    Nes.video = (struct graphics){};
+
+/*
     Nes.video = init_graphics();
     if (INIT_GRAPHICS_FAILED(Nes.video)) {
         fprintf(stderr, "Unable to initialize video output.");
         return 1;
     };
-
+*/
     int err = nestor_cartridge(&Nes, game_path);
     
     if (err) {
@@ -28,7 +31,6 @@ int main(int arg, char * argv[])
     }
 
     SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
-    getchar();
     /*
     while (true) {
         //usleep(1000);
@@ -39,8 +41,7 @@ int main(int arg, char * argv[])
     //  sounds(Nes);
     //  events(Nes);
     //  delay() zillion fps
-    }
-    */
+    }*/
     SDL_DestroyWindow(dbg_win);
     free_graphics(&Nes.video);
     return 0;

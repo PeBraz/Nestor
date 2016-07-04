@@ -65,10 +65,26 @@ struct graphics
     uint8_t memory[NES_V_MEM_SIZE];
     uint8_t oam[NES_OAM_MEM_SIZE];
     uint8_t oam2[NES_OAM2_MEM_SIZE];
-    uint16_t nametable;
+    
     uint16_t bg_pattern_table;
+    SDL_Surface **pattern0;
+    SDL_Surface **pattern1;
+    struct{
+    	int width;
+    	int height;
+    }pixel;
 
+    // PPUCTRL
+    uint16_t nametable;
+    int vram_inc;
+    uint16_t sprite_addr;
+    uint16_t bg_addr;
+    int sprite_height;
+    int ppu_ms_select;
+    int vblank_nmi;
 };
+
+
 
 struct graphics init_graphics();
 void free_graphics(struct graphics *);
