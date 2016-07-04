@@ -1,6 +1,7 @@
 
 #include <unistd.h>
 #include "nestor.h"
+#include <SDL2/SDL.h>
 //#include "graphi.h"
 
 
@@ -13,17 +14,22 @@ int main(int arg, char * argv[])
     //"../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();
+    Nes.video = init_graphics();
+    if (INIT_GRAPHICS_FAILED(Nes.video)) {
+        fprintf(stderr, "Unable to initialize video output.");
+        return 1;
+    };
+
     int err = nestor_cartridge(&Nes, game_path);
     
     if (err) {
         fprintf(stderr, "Unable to load game <%s>\n", game_path);
         return 1;
     }
-    /*Nes.video = init_graphics();
-    if (INIT_GRAPHICS_FAILED(Nes.video)) {
-        fprintf(stderr, "Unable to initialize video output.");
-        return 1;
-    }*/
+
+    SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
+    getchar();
+    /*
     while (true) {
         //usleep(1000);
         emulate(&Nes);
@@ -34,8 +40,9 @@ int main(int arg, char * argv[])
     //  events(Nes);
     //  delay() zillion fps
     }
-    
-    //free_graphics(&Nes.video);
+    */
+    SDL_DestroyWindow(dbg_win);
+    free_graphics(&Nes.video);
     return 0;
 
 }

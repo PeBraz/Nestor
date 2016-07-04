@@ -77,6 +77,10 @@ void draw_tile(struct graphics*,int,int);
 int get_pallete_color(struct graphics *, uint8_t,int);
 void draw_pixel(struct graphics *,int,int,int);
 
+
+SDL_Window *ppu_mem_view(struct graphics *);
+
+
 #define INIT_GRAPHICS_FAILED(video) (video).window == NULL
 
 #endif

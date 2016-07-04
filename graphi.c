@@ -89,22 +89,26 @@ SDL_Window * ppu_mem_view(struct graphics *g) {
         16 * 8,
         SDL_WINDOW_BORDERLESS);
 
+    SDL_Surface * surface = SDL_GetWindowSurface(window);
     /* For each right/left tile*/
-    for (int tile_i=0; tile_i < 256; tile_i++) {
+    int tile_i, byte_i, pix_i;
+    for (tile_i=0; tile_i < 256; tile_i++) {
         /* For each byte in tile*/
-        for (int byte_i=0; byte_i < 8; byte_i++) {
+        
+        for (byte_i=0; byte_i < 8; byte_i++) {
             uint8_t patt_1 = g->memory[tile_i+byte_i];
             uint8_t patt_2 = g->memory[tile_i+byte_i+8]; 
 
             /* For each bit*/
-            for (int pix_i=0; pix_i < 8; pix_i++) {
+            for (pix_i=0; pix_i < 8; pix_i++) {
 
-                int patt_id = ((patt_0 >> pix_i) & 0x1) | (((patt_1 >> pix_i) & 0x1) << 1);
-
-                SDL_LockSurface(window);
+                int patt_id = ((patt_1 >> pix_i) & 0x1) | (((patt_2 >> pix_i) & 0x1) << 1);
+                int y = ((tile_i / 16) * 8) + byte_i; // 
+                int x = ((tile_i % 16) * 8) + (8-pix_i); 
+                SDL_LockSurface(surface);
                 uint32_t *pixels = (uint32_t*)surface->pixels;
                 pixels[(y * surface->w) + x] = my_pixels[patt_id];
-                SDL_UnlockSurface(window);
+                SDL_UnlockSurface(surface);
             }
         }
     }
