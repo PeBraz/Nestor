@@ -16,13 +16,13 @@ int main(int arg, char * argv[])
     struct nestor Nes = nestor_init();
     Nes.video = (struct graphics){};
 
-/*
+
     Nes.video = init_graphics();
     if (INIT_GRAPHICS_FAILED(Nes.video)) {
         fprintf(stderr, "Unable to initialize video output.");
         return 1;
     };
-*/
+
     int err = nestor_cartridge(&Nes, game_path);
     
     if (err) {
@@ -30,19 +30,15 @@ int main(int arg, char * argv[])
         return 1;
     }
 
-    SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
-    /*
+    //SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
+    
     while (true) {
-        //usleep(1000);
         emulate(&Nes);
-
-    //  update_screen(&Nes.video);    
-    //  graphics(Nes);
-    //  sounds(Nes);
-    //  events(Nes);
-    //  delay() zillion fps
-    }*/
-    SDL_DestroyWindow(dbg_win);
+        update_screen(&Nes.video); 
+        if (nestor_events(&Nes))
+            break;  
+        //getchar(); 
+    }
     free_graphics(&Nes.video);
     return 0;
 

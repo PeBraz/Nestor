@@ -82,6 +82,9 @@ struct graphics
     int sprite_height;
     int ppu_ms_select;
     int vblank_nmi;
+
+    // PPUMASK
+    int greyscale;
 };
 
 

@@ -493,3 +493,19 @@ int nestor_cartridge(struct nestor *nes, char *game)
 }
 
 
+
+
+int nestor_events(struct nestor *nes) 
+{
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event)) {
+		switch(event.type) {
+			case SDL_QUIT:
+				return 1;
+			case SDL_KEYDOWN:
+				if (event.key.keysym.sym == SDLK_ESCAPE) return 1;
+		}
+	}
+	return 0;
+}

@@ -40,6 +40,7 @@
 
 void  draw_tile_from_scanline(struct graphics*, int, int);
 void sprite_evaluation(struct graphics*, int, int);
+void init_pattern_table(struct graphics *);
 
 struct graphics init_graphics()
 {
@@ -54,12 +55,13 @@ struct graphics init_graphics()
                                         SDL_WINDOWPOS_UNDEFINED,
                                         WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
 
+
     if (!w) {
         fprintf(stderr, "Unable to create window: %s\n", SDL_GetError());
         goto sdl_failure;
     }
 
-    return (struct graphics)
+    struct graphics g= (struct graphics)
     { .pallete = 
         {   
             333,014,006,326,403,503,510,420,320,120,031,040,022,000,000,000,
@@ -67,8 +69,13 @@ struct graphics init_graphics()
             777,357,447,637,707,737,740,750,660,360,070,276,077,000,000,000,
             777,567,657,757,747,755,764,772,773,572,473,276,467,000,000,000
         },
-        .window = w
+        .window = w,
+        .pixel = {1,1},
     };
+
+    init_pattern_table(&g);
+
+    return g;
 
 
 sdl_failure:
@@ -223,6 +230,7 @@ SDL_Window * ppu_mem_view(struct graphics *g) {
 
 void free_graphics(struct graphics * graphics)
 {
+    destroy_pattern_table(graphics);
     SDL_DestroyWindow(graphics->window);
     SDL_Quit();
 }
@@ -240,7 +248,7 @@ void scanline(struct graphics* graphics, int line) {
         // during sequential execution disallow program from accessing ppu memory, 
         //1 scanline - 32 tiles (30 from current and 2 for next scanline)
         int tile;
-        sprite_evaluation(graphics, tile, line);
+        //sprite_evaluation(graphics, tile, line);
         for (tile = 2; tile < 32; tile++)
             draw_tile_from_scanline(graphics, tile, line); //should return data
 
@@ -282,7 +290,6 @@ void  draw_tile_from_scanline(struct graphics* graphics, int x, int y)
     uint8_t tile_pt_low = graphics->bg_pattern_table + tile_pt;
     uint8_t tile_pt_high = tile_pt_low + 8;
     
-
     // this defines a sprite and colors, this shouldnt be done on runtime, 
     // the sprite should have already been created
     // Im doing this 1 line at a time, which is slower, but closer to the hardware
@@ -310,6 +317,28 @@ void  draw_tile_from_scanline(struct graphics* graphics, int x, int y)
     }
 }
 
+#define SCREEN_TILES_COUNT 960
+
+void draw_bg(struct graphics *g) {
+
+    SDL_Surface *main_surface = SDL_GetWindowSurface(g->window);
+
+    int tile_width = 8*g->pixel.width;
+    int tile_height = 8*g->pixel.height;
+    int i;
+    for (i=0; i < SCREEN_TILES_COUNT; i++) {
+        uint8_t bg_tile_off = g->memory[g->nametable + i];
+        SDL_Surface * tile = (g->bg_addr?g->pattern1:g->pattern0)[bg_tile_off];
+        SDL_Rect * dst_rect = 
+            &(SDL_Rect){  
+                .x=tile_width * (i % 32),
+                .y=tile_height * (i / 32),
+                .w=tile_width,
+                .h=tile_height
+            };
+        SDL_BlitSurface(tile, NULL, main_surface, dst_rect);
+    }
+}
 
 //
 //      For each scanline evaluates the sprites in oam memory, taking up to 8 sprites it finds,
@@ -339,17 +368,20 @@ void sprite_evaluation(struct graphics *graphics, int x, int y)
 int update_screen(struct graphics * graphics)
 {
 
-    int y, x;
+    update_pattern_table(graphics);
+    graphics->pixel.width = graphics->pixel.height = 0;
+    draw_bg(graphics);
+    SDL_UpdateWindowSurface(graphics->window);
+    return 0;
+
+   /* int y, x;
 
     for (y = 0 ; y < SCREEN_HEIGHT_TILES; y++) {
         for (x = 0; x < SCREEN_WIDTH_TILES; x++) {
             draw_tile(graphics, x, y);
         }
-    }
-    SDL_UpdateWindowSurface(graphics->window);
+    }*/
 //    SDL_Delay(1000);
-
-    return 0;
 }
 
 
@@ -450,5 +482,28 @@ void access_ppuctrl (struct graphics *g, uint8_t ppuctrl)
     g->vblank_nmi = (ppuctrl & PPUCTRL_VBLANK_NMI)? 1:0;
 }
 
+#define PPUMASK_GREYSCALE_MASK 0x01
 
+void access_ppumask (struct graphics *g, uint8_t ppumask)
+{
+    //probably won't care with none of these
+    //g->greyscale = (ppumask & PPUMASK_GREYSCALE_MASK)? 1:0;
+    //,,,
+
+}
+
+#define PPUSTATUS_VBLANK 0x80
+
+void update_ppustatus (struct graphics *g, uint8_t *ppustatus) 
+{
+    //sprite overflow (more than 8 sprites in a scanline)
+    // bit 7  for vblank state, set during scanline 241
+    // Reads by cpu must clear bit 7
+}
+
+void access_oamaddr(struct graphics *g, uint8_t *addr)
+{
+    //provides index to first sprite during sprite evaluation
+
+}
 
