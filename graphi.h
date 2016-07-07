@@ -85,6 +85,12 @@ struct graphics
 
     // PPUMASK
     int greyscale;
+
+    // PPUADDR
+    int ppuaddr_writes; // number of writes, can only be 0 or 1, reset on ppustatus read
+
+    uint16_t vram_addr;
+
 };
 
 

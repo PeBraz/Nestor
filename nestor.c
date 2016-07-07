@@ -405,6 +405,7 @@ void emulate(struct nestor * nes)
 		DBGF("[M:%02x]: %02x not found\n", nes->regs.pc, op);
 		getchar();
 	}
+	//printf("%x - %x\n", nes->memory[0x0000], nes->memory[0x0001]);
 #else 
 	nes->opcodes[op](nes);
 	}
@@ -430,7 +431,11 @@ uint8_t nestor_set_byte(struct nestor * nes, uint16_t p_byte, uint8_t val)
 #define INES_IS_FOUR_SCREEN(flag) ((flag & 0x08) == 0x8)
 #define PRG_ROM1_OFFSET 0x8000
 #define PRG_ROM2_OFFSET 0xC000
+
 #define RESET_INTERRUPT 0xFFFC
+#define IRQ_INTERRUPT 0xFFFE
+#define NMI_INTERRPUT 0xFFFA
+
 
 int nestor_cartridge(struct nestor *nes, char *game) 
 {
@@ -493,7 +498,16 @@ int nestor_cartridge(struct nestor *nes, char *game)
 }
 
 
+void set_irq(struct nestor *nes) 
+{
+	nes->regs.pc = (nes->memory[IRQ_INTERRUPT + 1] << 8) | nes->memory[IRQ_INTERRUPT];
 
+}
+
+void set_nmi(struct nestor *nes)
+{
+	nes->regs.pc = (nes->memory[NMI_INTERRPUT + 1] << 8) | nes->memory[NMI_INTERRPUT];
+}
 
 int nestor_events(struct nestor *nes) 
 {

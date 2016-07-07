@@ -232,8 +232,8 @@ struct nestor {
                 }
             //fprintf(stderr, "DEBUG [%s:%d]: %s - %s\n", __FILE__, __LINE__, #OP, #MODE);
 #else
-//#define DBG(msg)
-//#define DBGF(msg, ...)
+#define DBG(msg)
+#define DBGF(msg, ...)
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
                     MODE(nes, OP);\

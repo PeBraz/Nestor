@@ -32,9 +32,23 @@ int main(int arg, char * argv[])
 
     //SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
     
+    int vblank_clock = 100000;
+    int ppu_clock = 3;
     while (true) {
         emulate(&Nes);
-        update_screen(&Nes.video); 
+
+        if (!(--vblank_clock)){
+           // if (Nes.video.vbank_nmi && !(--vblank_clock))
+             //   Nes.memory[]*/
+            printf("%s\n", "UPDATE SCREEN");
+            update_screen(&Nes.video); 
+            vblank_clock = 10000;
+
+        printf("vram_off:%x\n", Nes.video.vram_addr);
+        if (Nes.video.vram_addr == 0x27FF) 
+                getchar();
+        }
+
         if (nestor_events(&Nes))
             break;  
         //getchar(); 
