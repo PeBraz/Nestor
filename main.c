@@ -14,14 +14,12 @@ int main(int arg, char * argv[])
     //"../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();
-    Nes.video = (struct graphics){};
-
 
     Nes.video = init_graphics();
     if (INIT_GRAPHICS_FAILED(Nes.video)) {
         fprintf(stderr, "Unable to initialize video output.");
         return 1;
-    };
+    }
 
     int err = nestor_cartridge(&Nes, game_path);
     
@@ -33,7 +31,6 @@ int main(int arg, char * argv[])
     //SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
     
     int vblank_clock = 100000;
-    int ppu_clock = 3;
     while (true) {
         emulate(&Nes);
 
@@ -42,7 +39,7 @@ int main(int arg, char * argv[])
              //   Nes.memory[]*/
             printf("%s\n", "UPDATE SCREEN");
             update_screen(&Nes.video); 
-            vblank_clock = 10000;
+            vblank_clock = 100000;
 
         printf("vram_off:%x\n", Nes.video.vram_addr);
         if (Nes.video.vram_addr == 0x27FF) 

@@ -5,6 +5,37 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+
+#define NAMETABLE0 0x2000
+#define NAMETABLE1 0x2400
+#define NAMETABLE2 0x2800
+#define NAMETABLE3 0x2C00
+
+#define ATTRTABLE0 0x23C0
+#define ATTRTABLE1 0x27C0
+#define ATTRTABLE2 0x2BC0
+#define ATTRTABLE3 0x2FC0
+
+#define PATTTABLE0 0x0000
+#define PATTTABLE1 0x1000
+
+#define BCKGRND_PALLETE0 0x3F00
+#define BCKGRND_PALLETE1 0x3F05
+#define BCKGRND_PALLETE2 0x3F09
+#define BCKGRND_PALLETE3 0x3F0D
+
+#define WINDOW_WIDTH 640
+#define WINDOW_HEIGHT 480
+
+#define SCREEN_WIDTH_PIXEL 256
+#define SCREEN_HEIGHT_PIXEL 240
+
+#define SCREEN_WIDTH_TILES 32
+#define SCREEN_HEIGHT_TILES 30
+
+#define PIXEL_WIDTH 3
+#define PIXEL_HEIGHT 3
+
 //PPU control register -> write
 #define PPUCTRL 0x2000
 //PPU mask register -> write
@@ -67,8 +98,10 @@ struct graphics
     uint8_t oam2[NES_OAM2_MEM_SIZE];
     
     uint16_t bg_pattern_table;
+
     SDL_Surface **pattern0;
     SDL_Surface **pattern1;
+    
     struct{
     	int width;
     	int height;
@@ -104,7 +137,7 @@ void draw_pixel(struct graphics *,int,int,int);
 
 
 SDL_Window *ppu_mem_view(struct graphics *);
-
+SDL_Window *ppu_nametable_view(struct graphics *);
 
 #define INIT_GRAPHICS_FAILED(video) (video).window == NULL
 

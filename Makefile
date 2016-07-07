@@ -2,9 +2,11 @@ CC=gcc
 XNAME=nestor
 MACROS=-DNESTOR_DEBUG -DNESTOR_BREAK 
 MFILE=-imacros macros.h
-all: main.o op.o op_modes.o nestor.o main.o graphi.o
-	${CC} -o ${XNAME} main.o op.o op_modes.o nestor.o graphi.o  -lSDL2
+all: main.o op.o op_modes.o nestor.o main.o graphi.o ppu_registers.o
+	${CC} -o ${XNAME} main.o op.o op_modes.o nestor.o graphi.o ppu_registers.o -lSDL2
 
+ppu_registers.o:
+	${CC} -g -c ppu_registers.c
 main.o:
 	${CC} ${MFILE} -g -c main.c
 nestor.o:
@@ -29,4 +31,4 @@ test: test-c
 	./{XNAME}_tests
 
 clean:
-	rm op.o op_modes.o nestor.o op_tests.o main.o graphi.o
+	rm op.o op_modes.o nestor.o main.o graphi.o ppu_registers.o

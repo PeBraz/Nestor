@@ -49,8 +49,6 @@ void access_oamaddr(struct graphics *g, uint8_t *addr)
 }
 
 
-
-
 void nes_check_read(struct nestor *nes, uint16_t mem_addr)
 {
     // If not reading from a ppu register 0x2000 - 0x3FFF
@@ -60,7 +58,7 @@ void nes_check_read(struct nestor *nes, uint16_t mem_addr)
     switch(mem_addr & 0x7) {
         // Writing to ppuctrl
         case 0x0: 
-            //access_ppuctrl(nes->video, nes->memory[mem_addr]);
+            access_ppuctrl(&nes->video, nes->memory[mem_addr]);
             break;
         case 0x1: break;
 

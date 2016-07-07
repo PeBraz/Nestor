@@ -2,47 +2,6 @@
 #include "nestor.h"
 #include "ppu_registers.h"
 
-void nes_check_read(struct nestor *nes, uint16_t mem_addr)
-{
-    // If not reading from a ppu register 0x2000 - 0x3FFF
-
-   if (!(mem_addr & 0x2000) || !(mem_addr & (0x3000))) return;
-
-    switch(mem_addr & 0x7) {
-        // Writing to ppuctrl
-        case 0x0: 
-            //access_ppuctrl(nes->video, nes->memory[mem_addr]);
-            break;
-        case 0x1: break;
-
-        //Reading from ppustatus
-        case 0x2: 
-            nes->memory[0x2002] &= 0x7F;
-            nes->memory[0x2005] = 0;
-            nes->memory[0x2006] = 0;
-            nes->video.ppuaddr_writes = 0;
-            break;
-        case 0x3: break;
-        case 0x4: break;
-        case 0x5: break;
-        case 0x6: 
-            if (nes->video.ppuaddr_writes) 
-                nes->video.vram_addr |= nes->memory[0x2006];
-            else 
-                nes->video.vram_addr |= (nes->memory[0x2006] << 8);
-            nes->video.ppuaddr_writes = !nes->video.ppuaddr_writes;
-
-            break;
-        case 0x7: 
-            // read vs write
-            // read: fetches the memory address and increments vram
-            // write:  
-            nes->memory[0x2007] = nes->video.memory[nes->video.vram_addr];
-            nes->video.vram_addr += 1;//nes->video.vram_inc;
-        break;
-    }
-
-}
 
 
 void implied(struct nestor * nes, void(*operation)(struct nestor *))

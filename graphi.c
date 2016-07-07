@@ -5,36 +5,6 @@
 #include <assert.h>
 #include <string.h>
 
-#define SCREEN_WIDTH_PIXEL 256
-#define SCREEN_HEIGHT_PIXEL 240
-
-#define SCREEN_WIDTH_TILES 32
-#define SCREEN_HEIGHT_TILES 30
-
-#define NAMETABLE0 0x2000
-#define NAMETABLE1 0x2400
-#define NAMETABLE2 0x2800
-#define NAMETABLE3 0x2C00
-
-#define ATTRTABLE0 0x23C0
-#define ATTRTABLE1 0x27C0
-#define ATTRTABLE2 0x2BC0
-#define ATTRTABLE3 0x2FC0
-
-#define PATTTABLE0 0x0000
-#define PATTTABLE1 0x1000
-
-#define BCKGRND_PALLETE0 0x3F00
-#define BCKGRND_PALLETE1 0x3F05
-#define BCKGRND_PALLETE2 0x3F09
-#define BCKGRND_PALLETE3 0x3F0D
-
-#define WINDOW_WIDTH 640
-#define WINDOW_HEIGHT 480
-
-
-#define PIXEL_WIDTH 4
-#define PIXEL_HEIGHT 2
 
 #define NAME_TO_ATTR(nametable) (nametable + 960)
 
@@ -70,11 +40,8 @@ struct graphics init_graphics()
             777,567,657,757,747,755,764,772,773,572,473,276,467,000,000,000
         },
         .window = w,
-        .pixel = {1,1},
+        .pixel = {PIXEL_WIDTH, PIXEL_HEIGHT},
     };
-
-    init_pattern_table(&g);
-
     return g;
 
 
@@ -200,17 +167,17 @@ SDL_Window * ppu_mem_view(struct graphics *g) {
         win_height,
         SDL_WINDOW_BORDERLESS);
 
-    SDL_Surface * main_surface = SDL_GetWindowSurface(window);
+   SDL_Surface *main_surface = SDL_GetWindowSurface(window);
 
     init_pattern_table(g);
     update_pattern_table(g);
 
-    int tile_width = 8*g->pixel.width;
-    int tile_height = 8*g->pixel.height;
-
     SDL_Surface *patt0_surface = surface_from_patterns(g, g->pattern0);
     SDL_Surface *patt1_surface = surface_from_patterns(g, g->pattern1);
 
+
+    int tile_width = 8*g->pixel.width;
+    int tile_height = 8*g->pixel.height;
 
     SDL_BlitSurface(patt0_surface, NULL, main_surface, 
         &(SDL_Rect){0,0, PATT_TABLE_WIDTH * g->pixel.width, PATT_TABLE_HEIGHT * g->pixel.height});
@@ -225,6 +192,7 @@ SDL_Window * ppu_mem_view(struct graphics *g) {
     destroy_pattern_table(g);
     return window;
 }
+
 
 
 
@@ -318,7 +286,7 @@ void  draw_tile_from_scanline(struct graphics* graphics, int x, int y)
 }
 
 #define SCREEN_TILES_COUNT 960
-
+void debug_surface(SDL_Surface *surface);
 void draw_bg(struct graphics *g) {
 
     SDL_Surface *main_surface = SDL_GetWindowSurface(g->window);
@@ -367,21 +335,9 @@ void sprite_evaluation(struct graphics *graphics, int x, int y)
 
 int update_screen(struct graphics * graphics)
 {
-
-    update_pattern_table(graphics);
-    graphics->pixel.width = graphics->pixel.height = 0;
     draw_bg(graphics);
     SDL_UpdateWindowSurface(graphics->window);
     return 0;
-
-   /* int y, x;
-
-    for (y = 0 ; y < SCREEN_HEIGHT_TILES; y++) {
-        for (x = 0; x < SCREEN_WIDTH_TILES; x++) {
-            draw_tile(graphics, x, y);
-        }
-    }*/
-//    SDL_Delay(1000);
 }
 
 
@@ -449,10 +405,10 @@ int get_pallete_color(struct  graphics * graphics, uint8_t pallete, int color_nu
 
 void draw_pixel(struct graphics * graphics, int x, int y, int color)
 {
-    SDL_Rect rect = (SDL_Rect){  x * PIXEL_WIDTH,
-                                y * PIXEL_HEIGHT,
-                                PIXEL_WIDTH,
-                                PIXEL_HEIGHT};
+    SDL_Rect rect = (SDL_Rect){  x * graphics->pixel.width,
+                                y * graphics->pixel.width,
+                                graphics->pixel.width,
+                                graphics->pixel.width};
 
     SDL_Surface * s = SDL_GetWindowSurface(graphics->window);
 

@@ -1,4 +1,6 @@
 #include "nestor.h"
+#include "graphi.h"
+
 
 #define NES_ROM_HEADER_SIZE 16
 
@@ -468,7 +470,8 @@ int nestor_cartridge(struct nestor *nes, char *game)
 	int chr_rom_size = (int)header_buffer[4] * 8192;
 	
 	fread(nes->video.memory, sizeof(uint8_t), chr_rom_size, f);
-
+	init_pattern_table(&nes->video);
+	update_pattern_table(&nes->video);
 
 	uint8_t flag_6 = header_buffer[7];
 
