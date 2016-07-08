@@ -76,6 +76,8 @@
 #define MASK_GREEN 0x40 //NTSC format
 #define MASK_BLUE 0x80 //NTSC format
 
+#define STATUS_VBLANK 0x80
+
 
 #define NES_V_MEM_SIZE 16384
 #define NES_OAM_MEM_SIZE 256 // (64 * 4)

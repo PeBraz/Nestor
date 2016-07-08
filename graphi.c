@@ -286,7 +286,8 @@ void  draw_tile_from_scanline(struct graphics* graphics, int x, int y)
 }
 
 #define SCREEN_TILES_COUNT 960
-void debug_surface(SDL_Surface *surface);
+
+
 void draw_bg(struct graphics *g) {
 
     SDL_Surface *main_surface = SDL_GetWindowSurface(g->window);
@@ -334,7 +335,7 @@ void sprite_evaluation(struct graphics *graphics, int x, int y)
 }
 
 int update_screen(struct graphics * graphics)
-{
+{   
     draw_bg(graphics);
     SDL_UpdateWindowSurface(graphics->window);
     return 0;

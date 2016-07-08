@@ -1,5 +1,5 @@
 #include "nestor.h"
-
+#include <assert.h>
 
 uint8_t * nestor_load(struct nestor * nes, uint16_t address) 
 {
@@ -11,11 +11,12 @@ uint8_t * nestor_load(struct nestor * nes, uint16_t address)
 
 void nestor_st_push(struct nestor * nes, uint8_t val)
 {
-    nes->memory[nes->regs.sp--] = val;
+    nes->memory[0x0100 + nes->regs.sp--] = val;
 }
 uint8_t nestor_st_pop(struct nestor * nes)
-{
-    return nes->memory[++nes->regs.sp];
+{   
+    assert(nes->regs.sp != 0xFF);
+    return nes->memory[0x0100 | ++nes->regs.sp];
 }
 
 int overflow_8 (uint8_t a, uint8_t b)
@@ -529,37 +530,7 @@ void sbc(struct nestor * nes, uint8_t * mem)
         nes->regs.status &= ~CARRY_FLAG;
 
     nes->regs.acc = tmp & 0xFF;
-/*
-    if (nes->regs.acc & IS_NEGATIVE)
-        nes->regs.status |= NEGATIVE_FLAG;
 
-
-    if (nes->regs.status & CARRY_FLAG) {
-
-        if (!borrow_check(nes->regs.acc, 1)) 
-            nes->regs.status &= ~CARRY_FLAG; 
-        
-        if (overflow_8(nes->regs.acc, 1)) 
-            nes->regs.status |= OVERFLOW_FLAG;
-
-        nes->regs.acc -= 1;
-    }
-
-    if (borrow_check(nes->regs.acc, *mem)) 
-        nes->regs.status |= CARRY_FLAG;
-
-    if (overflow_8(nes->regs.acc, *mem))
-        nes->regs.status |= OVERFLOW_FLAG;
-
-
-    nes->regs.acc -= *mem;
-
-
-    if (nes->regs.acc & IS_NEGATIVE)
-        nes->regs.status |= NEGATIVE_FLAG;
-
-    if (!nes->regs.acc)
-        nes->regs.status |= ZERO_FLAG;*/
 }
 
 void sec(struct nestor * nes)

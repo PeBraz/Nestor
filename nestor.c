@@ -199,7 +199,7 @@ struct nestor nestor_init()
 		.opcodes = {NULL},
 		.regs = {
 			.status = 0x24,
-			.sp = 0x00FD
+			.sp = 0xFD
 		}
 	};
 
@@ -399,19 +399,11 @@ void emulate(struct nestor * nes)
 	uint8_t op = nes->memory[nes->regs.pc];
 
 	if (nes->opcodes[op] != NULL) {
-
-#ifdef NESTOR_DEBUG
 		nes->opcodes[op](nes);
-		DBG_CPU(nes);
 	} else {
-		DBGF("[M:%02x]: %02x not found\n", nes->regs.pc, op);
+		printf("[M:%02x]: %02x not found\n", nes->regs.pc, op);
 		getchar();
 	}
-	//printf("%x - %x\n", nes->memory[0x0000], nes->memory[0x0001]);
-#else 
-	nes->opcodes[op](nes);
-	}
-#endif
 #ifdef NESTOR_BREAK
 	getchar();
 #endif
@@ -503,13 +495,26 @@ int nestor_cartridge(struct nestor *nes, char *game)
 
 void set_irq(struct nestor *nes) 
 {
-	nes->regs.pc = (nes->memory[IRQ_INTERRUPT + 1] << 8) | nes->memory[IRQ_INTERRUPT];
+	nes->regs.pc = 	(nes->memory[IRQ_INTERRUPT + 1] << 8) | nes->memory[IRQ_INTERRUPT];
 
 }
 
 void set_nmi(struct nestor *nes)
 {
+	if (!nes->video.vblank_nmi) return;	
+	nestor_st_push(nes, (uint8_t)((nes->regs.pc) >> 8 )); //program counter high
+    nestor_st_push(nes, (uint8_t)(nes->regs.pc));   //program counter low
+    nestor_st_push(nes, nes->regs.status);  //status register
 	nes->regs.pc = (nes->memory[NMI_INTERRPUT + 1] << 8) | nes->memory[NMI_INTERRPUT];
+
+
+}
+
+int nes_vblank(struct nestor *nes) 
+{
+	set_nmi(nes);
+	nes->memory[PPUSTATUS] |= STATUS_VBLANK;
+	update_screen(&nes->video);
 }
 
 int nestor_events(struct nestor *nes) 

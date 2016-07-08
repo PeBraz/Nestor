@@ -1,3 +1,5 @@
+#include <string.h>
+#include <assert.h>
 #include "ppu_registers.h"
 
 #define PPUCTRL_NAMETABLE_BITS 0x03 
@@ -51,15 +53,23 @@ void access_oamaddr(struct graphics *g, uint8_t *addr)
 
 void nes_check_read(struct nestor *nes, uint16_t mem_addr)
 {
-    // If not reading from a ppu register 0x2000 - 0x3FFF
+    // If not reading from a ppu register 0x2000 - 0x3FFF or 0x4014
 
-   if (!(mem_addr & 0x2000) || !(mem_addr & (0x3000))) return;
+    if (!((mem_addr >= 0x2000 && mem_addr < 0x4000) || mem_addr == 0x4014)) return;
+
+    //printf("%x - %x\n", mem_addr, nes->memory[mem_addr]);
+    if (mem_addr == 0x4014) {
+        uint16_t mem_off = (nes->memory[0x4014] << 8);
+        memcpy(nes->video.oam, nes->memory + mem_off, NES_OAM_MEM_SIZE);
+        return;
+    }
 
     switch(mem_addr & 0x7) {
         // Writing to ppuctrl
         case 0x0: 
             access_ppuctrl(&nes->video, nes->memory[mem_addr]);
             break;
+
         case 0x1: break;
 
         //Reading from ppustatus
@@ -69,23 +79,23 @@ void nes_check_read(struct nestor *nes, uint16_t mem_addr)
             nes->memory[0x2006] = 0;
             nes->video.ppuaddr_writes = 0;
             break;
-        case 0x3: break;
+        case 0x3: 
+            break;
         case 0x4: break;
         case 0x5: break;
         case 0x6: 
             if (nes->video.ppuaddr_writes) 
                 nes->video.vram_addr |= nes->memory[0x2006];
-            else 
+            else {
+                nes->video.vram_addr = 0;
                 nes->video.vram_addr |= (nes->memory[0x2006] << 8);
+            }
             nes->video.ppuaddr_writes = !nes->video.ppuaddr_writes;
 
             break;
         case 0x7: 
-            // read vs write
-            // read: fetches the memory address and increments vram
-            // write:  
-            nes->memory[0x2007] = nes->video.memory[nes->video.vram_addr];
-            nes->video.vram_addr += 1;//nes->video.vram_inc;
+            nes->video.memory[nes->video.vram_addr] = nes->memory[0x2007];
+            nes->video.vram_addr += nes->video.vram_inc;
         break;
     }
 

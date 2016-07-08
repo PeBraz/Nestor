@@ -178,7 +178,7 @@
 #define INC_ABSOLUTE_X 0xFE
 
 struct nestor {
-    void (*opcodes[0xFF])(struct nestor *);
+    void (*opcodes[256])(struct nestor *);
     uint8_t memory[NES_MEM_SIZE];
 
     struct graphics video;
@@ -197,7 +197,7 @@ struct nestor {
             uint8_t carry : 1;
         }status;*/
         uint16_t pc;
-        uint16_t sp;
+        uint8_t sp;
     } regs;
 };
 
@@ -230,7 +230,7 @@ struct nestor {
                                             nes->regs.status, nes->regs.sp);\
                     MODE(nes, OP);\
                 }
-            //fprintf(stderr, "DEBUG [%s:%d]: %s - %s\n", __FILE__, __LINE__, #OP, #MODE);
+
 #else
 #define DBG(msg)
 #define DBGF(msg, ...)
@@ -239,7 +239,6 @@ struct nestor {
                     MODE(nes, OP);\
                 }
 #endif
-
 
 struct nestor nestor_init();
 int nestor_cartridge(struct nestor *, char *);
