@@ -187,15 +187,6 @@ struct nestor {
         uint8_t x;
         uint8_t y;
         uint8_t status;
-      /*  struct {
-            uint8_t negative : 1;
-            uint8_t overflow : 1;
-            uint8_t break : 1;
-            uint8_t interrupt : 1;
-            uint8_t decimal : 1;
-            uint8_t zero : 1;
-            uint8_t carry : 1;
-        }status;*/
         uint16_t pc;
         uint8_t sp;
     } regs;
@@ -203,10 +194,6 @@ struct nestor {
 
 #ifdef NESTOR_DEBUG 
 /*
-#define DBG_REGS(nes) fprintf("[A:%x X:%x Y:%x]",\
-     nes->regs.acc, nes->regs.x, nes->regs.y); 
-*/
-     /*
 #define DBG_CPU(nes) fprintf(stderr, "DEBUG: [A:%x X:%x Y:%x]-[%c%c%c%c%c%c%c]\n",\
                                             nes->regs.acc, nes->regs.x, nes->regs.y,\
                                             (nes->regs.status & NEGATIVE_FLAG)? 'N' : '_',\
@@ -217,10 +204,6 @@ struct nestor {
                                             (nes->regs.status & ZERO_FLAG)? 'Z' : '_',\
                                             (nes->regs.status & CARRY_FLAG)? 'C' : '_');
 */
-#define DBG_CPU(nes)// fprintf(stderr, "DEBUG: [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n",\
-                      //                      nes->regs.acc, nes->regs.x, nes->regs.y,\
-                        //                    nes->regs.status, nes->regs.sp);
-
 #define DBG(msg) fprintf(stderr, "DEBUG [%s:%d]: %s\n",  __FILE__, __LINE__, msg); 
 #define DBGF(msg,...) fprintf(stderr, "DEBUG [%s:%d]: " msg "\n", __FILE__, __LINE__, __VA_ARGS__);
 #define NES_DEF(OP, MODE) \
@@ -230,7 +213,6 @@ struct nestor {
                                             nes->regs.status, nes->regs.sp);\
                     MODE(nes, OP);\
                 }
-
 #else
 #define DBG(msg)
 #define DBGF(msg, ...)

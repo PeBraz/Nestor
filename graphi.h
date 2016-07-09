@@ -33,6 +33,8 @@
 #define SCREEN_WIDTH_TILES 32
 #define SCREEN_HEIGHT_TILES 30
 
+#define SCREEN_TILES_COUNT 960
+
 #define PIXEL_WIDTH 3
 #define PIXEL_HEIGHT 3
 
@@ -83,6 +85,8 @@
 #define NES_OAM_MEM_SIZE 256 // (64 * 4)
 #define NES_OAM2_MEM_SIZE 32 // (8 * 4)
 
+
+
 enum nes_mirror {
     VERTICAL,
     HORIZONTAL,
@@ -92,7 +96,7 @@ enum nes_mirror {
 
 struct graphics
 {
-    int pallete[256];
+    SDL_Color pallete[64];
     SDL_Window * window;
     enum nes_mirror mirror;
     uint8_t memory[NES_V_MEM_SIZE];

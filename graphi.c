@@ -23,21 +23,32 @@ struct graphics init_graphics()
     SDL_Window * w = SDL_CreateWindow("Nestor -- 0.0 ",
                                         SDL_WINDOWPOS_UNDEFINED,
                                         SDL_WINDOWPOS_UNDEFINED,
-                                        WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
-
-
-    if (!w) {
-        fprintf(stderr, "Unable to create window: %s\n", SDL_GetError());
-        goto sdl_failure;
-    }
+                                        PIXEL_WIDTH * 256, PIXEL_HEIGHT * 240, SDL_WINDOW_SHOWN);
 
     struct graphics g= (struct graphics)
-    { .pallete = 
-        {   
-            333,014,006,326,403,503,510,420,320,120,031,040,022,000,000,000,
-            555,036,027,407,507,704,700,630,430,140,040,053,044,000,000,000,
-            777,357,447,637,707,737,740,750,660,360,070,276,077,000,000,000,
-            777,567,657,757,747,755,764,772,773,572,473,276,467,000,000,000
+    { .pallete = {
+        (SDL_Color){84,84,84,255},(SDL_Color){0,30,116,255},(SDL_Color){8,16,144,255},
+        (SDL_Color){48,0,136,255},(SDL_Color){68,0,100,255},(SDL_Color){92,0,48,255},
+        (SDL_Color){84,4,0,255},(SDL_Color){60,24,0,255},(SDL_Color){32,42,0,255},
+        (SDL_Color){8,58,0,255},(SDL_Color){0,64,0,255},(SDL_Color){0,60,0,255},
+        (SDL_Color){0,50,60,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},
+        (SDL_Color){152,150,152,255},(SDL_Color){8,76,196,255},(SDL_Color){48,50,236,255},
+        (SDL_Color){92,30,228,255},(SDL_Color){136,20,176,255},(SDL_Color){160,20,100,255},
+        (SDL_Color){152,34,32,255},(SDL_Color){120,60,0,255},(SDL_Color){84,90,0,255},
+        (SDL_Color){40,114,0,255},(SDL_Color){8,124,0,255},(SDL_Color){0,118,40,255},
+        (SDL_Color){0,102,120,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},
+        (SDL_Color){236,238,236,255},(SDL_Color){76,154,236,255},(SDL_Color){120,124,236,255},
+        (SDL_Color){176,98,236,255},(SDL_Color){228,84,236,255},(SDL_Color){236,88,180,250},
+        (SDL_Color){236,106,100,255},(SDL_Color){212,136,32,255},(SDL_Color){160,170,0,255},
+        (SDL_Color){116,196,0,255},(SDL_Color){76,208,32,255},(SDL_Color){56,204,108,255},
+        (SDL_Color){56,180,204,255},(SDL_Color){60,60,60,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},
+        (SDL_Color){236,238,236,255},(SDL_Color){168,204,236,255},(SDL_Color){188,188,236,255},
+        (SDL_Color){212,178,236,255},(SDL_Color){236,174,236,255},(SDL_Color){236,174,212,255},
+        (SDL_Color){236,180,176,255},(SDL_Color){228,196,144,255},(SDL_Color){204,210,120,255},
+        (SDL_Color){180,222,120,255},(SDL_Color){168,226,144,255},(SDL_Color){152,226,180,255},
+        (SDL_Color){160,214,228,255},(SDL_Color){160,162,160,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},
+
+
         },
         .window = w,
         .pixel = {PIXEL_WIDTH, PIXEL_HEIGHT},
@@ -103,7 +114,7 @@ void update_pattern_table(struct graphics *g)
 
 void __update_pattern_table(struct graphics *g, SDL_Surface **patt, int mem_offset) 
 {
-    uint32_t my_pixels[] = {GREY_1_PIX, GREY_2_PIX, GREY_3_PIX, GREY_4_PIX};
+    uint32_t my_pixels[] ={GREY_1_PIX, GREY_2_PIX, GREY_3_PIX, GREY_4_PIX};
 
     int tile_i, byte_i, pix_i;
     for (tile_i=0; tile_i < PATT_TILES_COUNT; tile_i++) {
@@ -122,6 +133,43 @@ void __update_pattern_table(struct graphics *g, SDL_Surface **patt, int mem_offs
             }
         }
     }
+}
+
+SDL_Surface *get_tile(struct graphics *g, int tile_offset) 
+{
+    SDL_Surface *tile = SDL_CreateRGBSurface(0, 8 * g->pixel.width, 8 * g->pixel.height, 
+                                                32, 0, 0, 0, 0);
+
+    uint16_t patt_table = g->bg_addr?0x1000:0x0000;
+    uint8_t nametable = g->memory[g->nametable + tile_offset];
+
+    int byte_i, pix_i;
+    for (byte_i=0; byte_i < 16; byte_i += 2) {
+        uint8_t plane_1 = g->memory[patt_table | (nametable << 4) | byte_i+1];
+        uint8_t plane_2 = g->memory[patt_table | (nametable << 4) |tile_offset+byte_i];
+        
+        /* Tile Attribute table*/
+        int rel_attr = (tile_offset/128) * 8 + (tile_offset%32/4); // bit ops faster...
+        int attr_byte = g->memory[g->nametable + SCREEN_TILES_COUNT + rel_attr]; // each byte for 4 tiles
+        int shift_value = (((attr_byte >> 5) & 0x1) + ((attr_byte>>1) & 0x1));
+        int pallete_num = (attr_byte >> shift_value) & 0x3;
+        /* For each bit*/
+        for (pix_i=0; pix_i < 8; pix_i++) {
+
+            int patt_id = ((plane_1 >> pix_i) & 0x1) | (((plane_2 >> pix_i) & 0x1) << 1);
+            int y = byte_i/2 * g->pixel.height;  
+            int x = (7-pix_i) * g->pixel.width; 
+
+            SDL_Rect * rect = &(SDL_Rect){x, y, g->pixel.width, g->pixel.height}; 
+
+            int bg_pallete_offset = 0x3F00 | 0x00 | (pallete_num << 2) | patt_id;
+
+            uint8_t color_i= g->memory[bg_pallete_offset];
+            SDL_Color color = g->pallete[color_i];
+            SDL_FillRect(tile, rect, SDL_MapRGBA(tile->format, color.r,color.g,color.b,color.a));
+            }
+    }
+    return tile;
 }
 
 SDL_Surface *surface_from_patterns(struct graphics *g, SDL_Surface ** patterns) 
@@ -285,8 +333,6 @@ void  draw_tile_from_scanline(struct graphics* graphics, int x, int y)
     }
 }
 
-#define SCREEN_TILES_COUNT 960
-
 
 void draw_bg(struct graphics *g) {
 
@@ -295,9 +341,9 @@ void draw_bg(struct graphics *g) {
     int tile_width = 8*g->pixel.width;
     int tile_height = 8*g->pixel.height;
     int i;
+
     for (i=0; i < SCREEN_TILES_COUNT; i++) {
-        uint8_t bg_tile_off = g->memory[g->nametable + i];
-        SDL_Surface * tile = (g->bg_addr?g->pattern1:g->pattern0)[bg_tile_off];
+        SDL_Surface *tile = get_tile(g, i);
         SDL_Rect * dst_rect = 
             &(SDL_Rect){  
                 .x=tile_width * (i % 32),
@@ -305,7 +351,10 @@ void draw_bg(struct graphics *g) {
                 .w=tile_width,
                 .h=tile_height
             };
+        //get attribute table, try to change colors in tile surface (if old_color = x -> new_color = y)
         SDL_BlitSurface(tile, NULL, main_surface, dst_rect);
+        SDL_FreeSurface(tile);
+        SDL_UpdateWindowSurface(g->window);
     }
 }
 
@@ -334,12 +383,19 @@ void sprite_evaluation(struct graphics *graphics, int x, int y)
 
 }
 
+
 int update_screen(struct graphics * graphics)
 {   
     draw_bg(graphics);
     SDL_UpdateWindowSurface(graphics->window);
     return 0;
 }
+
+int get_pallete_color(struct  graphics * graphics, uint8_t pallete, int color_num)
+{
+    return 0;//graphics->pallete[graphics->memory[pallete + (color_num & 0x3)]];
+}
+
 
 
 //
@@ -396,10 +452,6 @@ void draw_tile(struct graphics * graphics, int x, int y)
 
 }
 
-int get_pallete_color(struct  graphics * graphics, uint8_t pallete, int color_num)
-{
-    return graphics->pallete[graphics->memory[pallete + (color_num & 0x3)]];
-}
 
 
 
