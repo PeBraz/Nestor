@@ -145,8 +145,8 @@ SDL_Surface *get_tile(struct graphics *g, int tile_offset)
 
     int byte_i, pix_i;
     for (byte_i=0; byte_i < 16; byte_i += 2) {
-        uint8_t plane_1 = g->memory[patt_table | (nametable << 4) | byte_i+1];
-        uint8_t plane_2 = g->memory[patt_table | (nametable << 4) |tile_offset+byte_i];
+        uint8_t plane_1 = g->memory[(patt_table | (nametable << 4)) + byte_i+1];
+        uint8_t plane_2 = g->memory[(patt_table | (nametable << 4)) + byte_i];
         
         /* Tile Attribute table*/
         int rel_attr = (tile_offset/128) * 8 + (tile_offset%32/4); // bit ops faster...
@@ -354,7 +354,7 @@ void draw_bg(struct graphics *g) {
         //get attribute table, try to change colors in tile surface (if old_color = x -> new_color = y)
         SDL_BlitSurface(tile, NULL, main_surface, dst_rect);
         SDL_FreeSurface(tile);
-        SDL_UpdateWindowSurface(g->window);
+        //SDL_UpdateWindowSurface(g->window);
     }
 }
 
