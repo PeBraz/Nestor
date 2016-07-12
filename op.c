@@ -72,6 +72,7 @@ void zero_update(struct nestor * nes, uint8_t val)
 */
 void lda(struct nestor * nes, uint8_t * mem)
 {   
+    nes->action=NES_READ;
     nes->regs.acc = *mem;
 
     zero_update(nes, *mem);
@@ -80,6 +81,7 @@ void lda(struct nestor * nes, uint8_t * mem)
 
 void ldx(struct nestor * nes, uint8_t * mem)
 {   
+    nes->action=NES_READ;
     nes->regs.x = *mem;
 
     zero_update(nes, *mem);
@@ -88,6 +90,7 @@ void ldx(struct nestor * nes, uint8_t * mem)
 
 void ldy(struct nestor * nes, uint8_t * mem)
 {   
+    nes->action=NES_READ;
     nes->regs.y = *mem;
 
     zero_update(nes, *mem);
@@ -104,6 +107,7 @@ void ldy(struct nestor * nes, uint8_t * mem)
 
 void sta(struct nestor * nes, uint8_t * mem)
 {  
+    nes->action=NES_WRITE;
     * mem = nes->regs.acc;
 }
 
@@ -550,11 +554,13 @@ void sei(struct nestor * nes)
 
 void stx(struct nestor * nes, uint8_t * mem)
 {
+    nes->action=NES_WRITE;
     *mem = nes->regs.x;
 }
 
 void sty(struct nestor * nes, uint8_t * mem)
 {
+    nes->action=NES_WRITE;
     *mem = nes->regs.y;
 }
 void tax(struct nestor * nes)

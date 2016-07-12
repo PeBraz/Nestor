@@ -48,7 +48,6 @@ struct graphics init_graphics()
         (SDL_Color){180,222,120,255},(SDL_Color){168,226,144,255},(SDL_Color){152,226,180,255},
         (SDL_Color){160,214,228,255},(SDL_Color){160,162,160,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},
 
-
         },
         .window = w,
         .pixel = {PIXEL_WIDTH, PIXEL_HEIGHT},
@@ -118,15 +117,15 @@ void __update_pattern_table(struct graphics *g, SDL_Surface **patt, int mem_offs
 
     int tile_i, byte_i, pix_i;
     for (tile_i=0; tile_i < PATT_TILES_COUNT; tile_i++) {
-        for (byte_i=0; byte_i < 16; byte_i += 2) {
-            uint8_t plane_1 = g->memory[mem_offset + tile_i+byte_i+1];
-            uint8_t plane_2 = g->memory[mem_offset + tile_i+byte_i]; 
+        for (byte_i=0; byte_i < 8; byte_i ++) {
+            uint8_t plane_1 = g->memory[mem_offset + tile_i+byte_i];
+            uint8_t plane_2 = g->memory[mem_offset + tile_i+byte_i + 8]; 
             /* For each bit*/
             for (pix_i=0; pix_i < 8; pix_i++) {
 
-                int patt_id = ((plane_1 >> pix_i) & 0x1) | (((plane_2 >> pix_i) & 0x1) << 1);
-                int y = byte_i/2 * g->pixel.height;  
-                int x = (7-pix_i) * g->pixel.width; 
+                int patt_id = ((plane_1 >> (7-pix_i)) & 0x1) | (((plane_2 >> (7-pix_i)) & 0x1) << 1);
+                int y = byte_i * g->pixel.height;  
+                int x = pix_i * g->pixel.width; 
 
                 SDL_Rect * rect = &(SDL_Rect){x, y, g->pixel.width, g->pixel.height}; 
                 SDL_FillRect(patt[tile_i], rect, my_pixels[patt_id]);
@@ -144,9 +143,9 @@ SDL_Surface *get_tile(struct graphics *g, int tile_offset)
     uint8_t nametable = g->memory[g->nametable + tile_offset];
 
     int byte_i, pix_i;
-    for (byte_i=0; byte_i < 16; byte_i += 2) {
-        uint8_t plane_1 = g->memory[(patt_table | (nametable << 4)) + byte_i+1];
-        uint8_t plane_2 = g->memory[(patt_table | (nametable << 4)) + byte_i];
+    for (byte_i=0; byte_i < 8; byte_i++) {
+        uint8_t plane_1 = g->memory[(patt_table | (nametable << 4)) + byte_i];
+        uint8_t plane_2 = g->memory[(patt_table | (nametable << 4)) + byte_i+8];
         
         /* Tile Attribute table*/
         int rel_attr = (tile_offset/128) * 8 + (tile_offset%32/4); // bit ops faster...
@@ -156,9 +155,9 @@ SDL_Surface *get_tile(struct graphics *g, int tile_offset)
         /* For each bit*/
         for (pix_i=0; pix_i < 8; pix_i++) {
 
-            int patt_id = ((plane_1 >> pix_i) & 0x1) | (((plane_2 >> pix_i) & 0x1) << 1);
-            int y = byte_i/2 * g->pixel.height;  
-            int x = (7-pix_i) * g->pixel.width; 
+            int patt_id = ((plane_1 >> (7-pix_i)) & 0x1) | (((plane_2 >> (7-pix_i)) & 0x1) << 1);
+            int y = byte_i * g->pixel.height;  
+            int x = pix_i * g->pixel.width; 
 
             SDL_Rect * rect = &(SDL_Rect){x, y, g->pixel.width, g->pixel.height}; 
 
@@ -167,9 +166,48 @@ SDL_Surface *get_tile(struct graphics *g, int tile_offset)
             uint8_t color_i= g->memory[bg_pallete_offset];
             SDL_Color color = g->pallete[color_i];
             SDL_FillRect(tile, rect, SDL_MapRGBA(tile->format, color.r,color.g,color.b,color.a));
-            }
+        }
     }
     return tile;
+}
+
+// only works for 8x8 sprites, no flipping
+void *get_sprite(struct graphics *g, int sprite_offset)
+{
+    int sprite_size = g->sprite_height;
+    SDL_Surface *sprite_surface = SDL_CreateRGBSurface(0, 8 * g->pixel.width,
+                                                        g->sprite_height *g->pixel.height,
+                                                        32, 0, 0, 0, 0);
+    uint8_t y = g->oam[sprite_offset*4];
+    uint8_t tile_i = g->oam[sprite_offset*4 + 1];
+    uint8_t attr = g->oam[sprite_offset*4 + 2];
+    uint8_t x = g->oam[sprite_offset*4 + 3];
+    uint8_t alpha = (attr & 0x20)? 0x00 : 0xFF;
+
+    uint16_t patt_table = g->sprite_addr?0x1000:0x0000;
+    int byte_i, pix_i;
+    for (byte_i = 0; byte_i< 8; byte_i++) {
+
+        uint8_t plane_1 = g->memory[(patt_table | (tile_i << 4)) + byte_i];
+        uint8_t plane_2 = g->memory[(patt_table | (tile_i << 4)) + byte_i+8];
+        
+
+        for (pix_i=0; pix_i < 8; pix_i++) {
+
+            int patt_id = ((plane_1 >> (7-pix_i)) & 0x1) | (((plane_2 >> (7-pix_i)) & 0x1) << 1);
+            int sprite_pallete_offset = 0x3F00 | 0x10 | ((attr & 0x3)<< 2) | patt_id;
+
+            SDL_Rect * rect = &(SDL_Rect){pix_i*g->pixel.width, byte_i * g->pixel.height,
+                                         g->pixel.width, g->pixel.height}; 
+
+            uint8_t color_i= g->memory[sprite_pallete_offset];
+            SDL_Color color = g->pallete[color_i];
+
+            SDL_FillRect(sprite_surface, rect, SDL_MapRGBA(sprite_surface->format, color.r,color.g,color.b,alpha));
+        }
+    }
+    SDL_Rect dst = (SDL_Rect){x*g->pixel.width, y*g->pixel.height, g->pixel.width * 8, g->pixel.height * 8};
+    SDL_BlitSurface(sprite_surface, NULL, SDL_GetWindowSurface(g->window), &dst);
 }
 
 SDL_Surface *surface_from_patterns(struct graphics *g, SDL_Surface ** patterns) 
@@ -383,10 +421,18 @@ void sprite_evaluation(struct graphics *graphics, int x, int y)
 
 }
 
+void draw_sprites(struct graphics *g)
+{
+    int i;
+    for (i=0; i<64; i++)
+        get_sprite(g, i);
+}
+
 
 int update_screen(struct graphics * graphics)
 {   
     draw_bg(graphics);
+    draw_sprites(graphics);
     SDL_UpdateWindowSurface(graphics->window);
     return 0;
 }

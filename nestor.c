@@ -517,6 +517,86 @@ int nes_vblank(struct nestor *nes)
 	update_screen(&nes->video);
 }
 
+#define NES_IN_A 0
+#define NES_IN_B 1
+#define NES_IN_SELECT 2
+#define NES_IN_START 3
+#define NES_IN_UP 4
+#define NES_IN_DOWN 5
+#define NES_IN_LEFT 6
+#define NES_IN_RIGHT 7
+
+static int start_write = 0;
+static int last_4016_val = 0; 
+static int strobe = 0x0;
+static int nestor_inputs[8];
+static int read_number = 0;
+
+// A, B, Select, Start, up, down, left, right
+//not all behavior done (open bus needed for some games)
+// only 1 controller
+void nestor_input_read(struct nestor *nes) 
+{	
+	if (strobe) {
+		nes->memory[0x4016] = nestor_inputs[NES_IN_A]? 0x1:0x0;
+		return;
+	}
+
+	if (read_number > 7) 
+		nes->memory[0x4016] = 0x1;
+	else{
+		//the high bit declares that it is a cpu write (not program)
+		nes->memory[0x4016] = (nestor_inputs[read_number++])? 0x1:0x0;
+		printf("INPUT READ %d : %d\n", read_number, nes->memory[0x4016]);
+	}
+}
+
+
+void nestor_input_write(struct nestor *nes)
+{
+	switch (nes->action) {
+		case NES_READ: 
+			break;
+		case NES_WRITE: 
+			strobe = nes->memory[0x4016] & 0x1;
+			printf("WRITE: %d\n", strobe);
+			if (!strobe) read_number = 0;
+			else read_number--;
+			break;
+	}
+	// if there was a write 
+	/*if ((nes->memory[0x4016] == 0x1 && strobe == 0x0) 
+		||(nes->memory[0x4016] == 0x0 && strobe == 0x1))   {
+		strobe = !strobe;
+		printf("WRITE: %d\n", strobe );
+		if (!strobe) read_number =0;
+	}
+	start_write = 1;*/
+}
+
+//
+// Called after rom writing on 0x4016, if strobe (bit 0) is declared 1, reload with state of button A,
+//	 else read one button at a time. 
+//
+/*void nestor_input(struct nestor *nes) 
+{
+	// If value was written
+	if (last_4016_val != nes->memory[0x4016]){
+		//printf("Writing strobe: %x\n", nes->memory[0x4016]);
+		strobe = (nes->memory[0x4016] & 0x1);
+		read_number = 0;
+	}
+	else 
+		nestor_input_read(nes);
+}*/
+// 
+// The emulator needs to know if any value was written, we set the memory value 
+//
+void nestor_input_clear(struct nestor *nes) 
+{
+	last_4016_val = nes->memory[0x4016];
+}
+
 int nestor_events(struct nestor *nes) 
 {
 	SDL_Event event;
@@ -526,7 +606,30 @@ int nestor_events(struct nestor *nes)
 			case SDL_QUIT:
 				return 1;
 			case SDL_KEYDOWN:
-				if (event.key.keysym.sym == SDLK_ESCAPE) return 1;
+				switch (event.key.keysym.sym){
+					case SDLK_ESCAPE: return 1;
+					case SDLK_w: nestor_inputs[NES_IN_UP] = 1; break;
+					case SDLK_s: nestor_inputs[NES_IN_DOWN] = 1; break;
+					case SDLK_a: nestor_inputs[NES_IN_LEFT] = 1; break;
+					case SDLK_d: nestor_inputs[NES_IN_RIGHT] = 1; break;
+					case SDLK_j: nestor_inputs[NES_IN_A] = 1; break;
+					case SDLK_k: nestor_inputs[NES_IN_B] = 1; break;
+					case SDLK_RETURN: nestor_inputs[NES_IN_START] = 1; break;
+					case SDLK_BACKSPACE: nestor_inputs[NES_IN_SELECT] = 1; break;
+				}
+				break;
+			case SDL_KEYUP: 
+				switch (event.key.keysym.sym){
+					case SDLK_w: nestor_inputs[NES_IN_UP] = 0; break;
+					case SDLK_s: nestor_inputs[NES_IN_DOWN] = 0; break;
+					case SDLK_a: nestor_inputs[NES_IN_LEFT] = 0; break;
+					case SDLK_d: nestor_inputs[NES_IN_RIGHT] = 0; break;
+					case SDLK_j: nestor_inputs[NES_IN_A] = 0; break;
+					case SDLK_k: nestor_inputs[NES_IN_B] = 0; break;
+					case SDLK_RETURN: nestor_inputs[NES_IN_START] = 0; break;
+					case SDLK_BACKSPACE: nestor_inputs[NES_IN_SELECT] = 0; break;
+				}
+				break;
 		}
 	}
 	return 0;

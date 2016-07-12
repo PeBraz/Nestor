@@ -5,6 +5,7 @@
 #include "nestor.h"
 
 void nes_check_read(struct nestor *nes, uint16_t mem_addr);
+void nes_pre_read(struct nestor *nes, uint16_t mem_addr);
 
 void access_ppuctrl (struct graphics *g, uint8_t ppuctrl);
 void access_ppumask (struct graphics *g, uint8_t ppumask);

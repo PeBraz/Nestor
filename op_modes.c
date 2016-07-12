@@ -19,6 +19,7 @@ void absolute(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 {
     //loads 2 bytes after the instruction
     uint16_t byte_pos = nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8);
+    nes_pre_read(nes, byte_pos);
     operation(nes, &(nes->memory[byte_pos]));
     nes_check_read(nes, byte_pos);
 }
@@ -44,15 +45,17 @@ void zero_page(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 
 void absolute_x(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*)) 
 {
-    uint16_t byte_pos = nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8);
-    operation(nes, &(nes->memory[nes->regs.x + byte_pos]));
+    uint16_t byte_pos = (nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8)) + nes->regs.x;
+    nes_pre_read(nes, byte_pos);
+    operation(nes, &(nes->memory[byte_pos]));
     nes_check_read(nes, byte_pos);
 }
 
 void absolute_y(struct nestor * nes,void(*operation)(struct nestor *,uint8_t*)) 
 {
-    uint16_t byte_pos = nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8);
-    operation(nes, &(nes->memory[nes->regs.y + byte_pos]));
+    uint16_t byte_pos = (nes->memory[++nes->regs.pc] | (nes->memory[++nes->regs.pc] << 8)) + nes->regs.y;
+    nes_pre_read(nes, byte_pos);
+    operation(nes, &(nes->memory[byte_pos]));
     nes_check_read(nes, byte_pos);
 }
 
@@ -86,6 +89,7 @@ void indirect_x(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
     //x + val must wrap after 0xFF, not 0xFFFF
     uint16_t pt_zero_page = (nes->regs.x + nes->memory[++nes->regs.pc]) & 0xFF;
     uint16_t byte_pos = nes->memory[pt_zero_page] | (nes->memory[++pt_zero_page  & 0xFF] <<8);
+    nes_pre_read(nes, byte_pos);
     operation(nes, &(nes->memory[byte_pos]));
     nes_check_read(nes, byte_pos);
 }
@@ -94,6 +98,7 @@ void indirect_y(struct nestor * nes, void(*operation)(struct nestor *,uint8_t*))
 {   uint16_t pt = nes->memory[++nes->regs.pc];
     uint16_t zero_pt = nes->memory[pt] | (nes->memory[pt + 1] << 8);
     uint16_t byte_pos = zero_pt + nes->regs.y;
+    nes_pre_read(nes, byte_pos);
     operation(nes, &(nes->memory[byte_pos]));
     nes_check_read(nes, byte_pos);
 }

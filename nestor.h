@@ -177,11 +177,14 @@
 #define SBC_ABSOLUTE_X 0xFD
 #define INC_ABSOLUTE_X 0xFE
 
+#define NES_WRITE 0x1
+#define NES_READ 0x2
+
 struct nestor {
     void (*opcodes[256])(struct nestor *);
     uint8_t memory[NES_MEM_SIZE];
-
     struct graphics video;
+    int action; //write(1), read(2) or none(0)
     struct {
         uint8_t acc;
         uint8_t x;
@@ -208,9 +211,13 @@ struct nestor {
 #define DBGF(msg,...) fprintf(stderr, "DEBUG [%s:%d]: " msg "\n", __FILE__, __LINE__, __VA_ARGS__);
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
-                    fprintf(stderr, "DEBUG: %s - %s PC:%x [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n", #OP, #MODE, \
+                    if (nes->memory[nes->regs.pc] == LDA_ABSOLUTE || nes->memory[nes->regs.pc] == STA_ABSOLUTE\
+                        || nes->memory[nes->regs.pc] == LDX_ABSOLUTE || nes->memory[nes->regs.pc] == STX_ABSOLUTE\
+                        || nes->memory[nes->regs.pc] == LDY_ABSOLUTE || nes->memory[nes->regs.pc] == STY_ABSOLUTE)\
+                    printf( "DEBUG: %s - %s PC:%x [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n", #OP, #MODE, \
                                         nes->regs.pc, nes->regs.acc, nes->regs.x, nes->regs.y,\
                                             nes->regs.status, nes->regs.sp);\
+                    nes->action = 0;\
                     MODE(nes, OP);\
                 }
 #else
@@ -218,6 +225,7 @@ struct nestor {
 #define DBGF(msg, ...)
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
+                    nes->action = 0;\
                     MODE(nes, OP);\
                 }
 #endif
