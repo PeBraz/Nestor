@@ -542,12 +542,10 @@ void nestor_input_read(struct nestor *nes)
 		return;
 	}
 
-	if (read_number > 7) 
+	if (read_number > 7) {
 		nes->memory[0x4016] = 0x1;
-	else{
-		//the high bit declares that it is a cpu write (not program)
+	} else{
 		nes->memory[0x4016] = (nestor_inputs[read_number++])? 0x1:0x0;
-		printf("INPUT READ %d : %d\n", read_number, nes->memory[0x4016]);
 	}
 }
 
@@ -556,46 +554,17 @@ void nestor_input_write(struct nestor *nes)
 {
 	switch (nes->action) {
 		case NES_READ: 
+			printf("INPUT READ %d : %d\n", read_number, nes->memory[0x4016]);
 			break;
 		case NES_WRITE: 
 			strobe = nes->memory[0x4016] & 0x1;
-			printf("WRITE: %d\n", strobe);
+			printf("WRITE: %d\n", nes->memory[0x4016]);
 			if (!strobe) read_number = 0;
 			else read_number--;
 			break;
 	}
-	// if there was a write 
-	/*if ((nes->memory[0x4016] == 0x1 && strobe == 0x0) 
-		||(nes->memory[0x4016] == 0x0 && strobe == 0x1))   {
-		strobe = !strobe;
-		printf("WRITE: %d\n", strobe );
-		if (!strobe) read_number =0;
-	}
-	start_write = 1;*/
 }
 
-//
-// Called after rom writing on 0x4016, if strobe (bit 0) is declared 1, reload with state of button A,
-//	 else read one button at a time. 
-//
-/*void nestor_input(struct nestor *nes) 
-{
-	// If value was written
-	if (last_4016_val != nes->memory[0x4016]){
-		//printf("Writing strobe: %x\n", nes->memory[0x4016]);
-		strobe = (nes->memory[0x4016] & 0x1);
-		read_number = 0;
-	}
-	else 
-		nestor_input_read(nes);
-}*/
-// 
-// The emulator needs to know if any value was written, we set the memory value 
-//
-void nestor_input_clear(struct nestor *nes) 
-{
-	last_4016_val = nes->memory[0x4016];
-}
 
 int nestor_events(struct nestor *nes) 
 {

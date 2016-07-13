@@ -160,7 +160,7 @@ void and(struct nestor * nes, uint8_t *mem)
     nes->regs.acc &= *mem;
 
     negative_update(nes, *mem);
-    zero_update(nes, *mem);
+    zero_update(nes, nes->regs.acc);
 }
 /*
 * shift left once

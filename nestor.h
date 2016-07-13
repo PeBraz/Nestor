@@ -211,9 +211,6 @@ struct nestor {
 #define DBGF(msg,...) fprintf(stderr, "DEBUG [%s:%d]: " msg "\n", __FILE__, __LINE__, __VA_ARGS__);
 #define NES_DEF(OP, MODE) \
     void nes_call_ ## OP ## _ ## MODE (struct nestor * nes) {\
-                    if (nes->memory[nes->regs.pc] == LDA_ABSOLUTE || nes->memory[nes->regs.pc] == STA_ABSOLUTE\
-                        || nes->memory[nes->regs.pc] == LDX_ABSOLUTE || nes->memory[nes->regs.pc] == STX_ABSOLUTE\
-                        || nes->memory[nes->regs.pc] == LDY_ABSOLUTE || nes->memory[nes->regs.pc] == STY_ABSOLUTE)\
                     printf( "DEBUG: %s - %s PC:%x [A:%x X:%x Y:%x]-[P:%02x SP:%02x]\n", #OP, #MODE, \
                                         nes->regs.pc, nes->regs.acc, nes->regs.x, nes->regs.y,\
                                             nes->regs.status, nes->regs.sp);\
@@ -230,6 +227,9 @@ struct nestor {
                 }
 #endif
 
+/*                    if (nes->memory[nes->regs.pc] == LDA_ABSOLUTE || nes->memory[nes->regs.pc] == STA_ABSOLUTE\
+                        || nes->memory[nes->regs.pc] == LDX_ABSOLUTE || nes->memory[nes->regs.pc] == STX_ABSOLUTE\
+                        || nes->memory[nes->regs.pc] == LDY_ABSOLUTE || nes->memory[nes->regs.pc] == STY_ABSOLUTE)\*/
 struct nestor nestor_init();
 int nestor_cartridge(struct nestor *, char *);
 

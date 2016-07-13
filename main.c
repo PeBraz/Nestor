@@ -9,8 +9,9 @@ int main(int arg, char * argv[])
 {
     //"../nestest.nes";
     //  "../official_only.nes";
-    char * game_path = "../Donkey Kong (World) (Rev A).nes";
-       // "../Arkanoid (USA).nes";
+    //"../Bomberman (USA).nes";
+    char * game_path = "../Donkey Kong (World) (Rev A).nes";//
+       // "../Arkanoid (USA).n../NEStress.NESes";
     //"../Donkey Kong (World) (Rev A).nes";
 
     struct nestor Nes = nestor_init();

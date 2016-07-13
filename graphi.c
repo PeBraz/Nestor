@@ -178,7 +178,7 @@ void *get_sprite(struct graphics *g, int sprite_offset)
     SDL_Surface *sprite_surface = SDL_CreateRGBSurface(0, 8 * g->pixel.width,
                                                         g->sprite_height *g->pixel.height,
                                                         32, 0, 0, 0, 0);
-    uint8_t y = g->oam[sprite_offset*4];
+    uint8_t y = g->oam[sprite_offset*4] + 1;
     uint8_t tile_i = g->oam[sprite_offset*4 + 1];
     uint8_t attr = g->oam[sprite_offset*4 + 2];
     uint8_t x = g->oam[sprite_offset*4 + 3];
