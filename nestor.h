@@ -227,9 +227,6 @@ struct nestor {
                 }
 #endif
 
-/*                    if (nes->memory[nes->regs.pc] == LDA_ABSOLUTE || nes->memory[nes->regs.pc] == STA_ABSOLUTE\
-                        || nes->memory[nes->regs.pc] == LDX_ABSOLUTE || nes->memory[nes->regs.pc] == STX_ABSOLUTE\
-                        || nes->memory[nes->regs.pc] == LDY_ABSOLUTE || nes->memory[nes->regs.pc] == STY_ABSOLUTE)\*/
 struct nestor nestor_init();
 int nestor_cartridge(struct nestor *, char *);
 

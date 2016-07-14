@@ -395,14 +395,12 @@ struct nestor nestor_init()
 void emulate(struct nestor * nes)
 {
 	//take instruction code
-
 	uint8_t op = nes->memory[nes->regs.pc];
 
 	if (nes->opcodes[op] != NULL) {
 		nes->opcodes[op](nes);
 	} else {
 		printf("[M:%02x]: %02x not found\n", nes->regs.pc, op);
-		getchar();
 	}
 #ifdef NESTOR_BREAK
 	getchar();
@@ -411,13 +409,6 @@ void emulate(struct nestor * nes)
 	nes->regs.pc++;
 }
 
-
-
-uint8_t nestor_set_byte(struct nestor * nes, uint16_t p_byte, uint8_t val)
-{
-	//get as a little endian address
-	nes->memory[p_byte^0x1] = val; 
-}
 
 
 #define INES_IS_VERTICAL_MIRROR(flag) ((flag & 0x09) == 0x0)
@@ -553,12 +544,9 @@ void nestor_input_read(struct nestor *nes)
 void nestor_input_write(struct nestor *nes)
 {
 	switch (nes->action) {
-		case NES_READ: 
-			printf("INPUT READ %d : %d\n", read_number, nes->memory[0x4016]);
-			break;
+		case NES_READ: break;
 		case NES_WRITE: 
 			strobe = nes->memory[0x4016] & 0x1;
-			printf("WRITE: %d\n", nes->memory[0x4016]);
 			if (!strobe) read_number = 0;
 			else read_number--;
 			break;

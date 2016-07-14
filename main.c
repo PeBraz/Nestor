@@ -10,7 +10,7 @@ int main(int arg, char * argv[])
     //"../nestest.nes";
     //  "../official_only.nes";
     //"../Bomberman (USA).nes";
-    char * game_path = "../Donkey Kong (World) (Rev A).nes";//
+    char * game_path ="../Donkey Kong (World) (Rev A).nes";//
        // "../Arkanoid (USA).n../NEStress.NESes";
     //"../Donkey Kong (World) (Rev A).nes";
 
@@ -29,20 +29,16 @@ int main(int arg, char * argv[])
         return 1;
     }
 
-    //SDL_Window *dbg_win = ppu_mem_view(&Nes.video);
-    
-    int vblank_clock = 10000;
+    int vblank_clock = 3000;
     while (true) {
         emulate(&Nes);
         if (!(--vblank_clock)){
-            puts("UPDATE SCREEN");
             nes_vblank(&Nes); 
-            vblank_clock = 10000;
+            vblank_clock = 3000;
         }
 
         if (nestor_events(&Nes))
             break;  
-        //getchar(); 
     }
     free_graphics(&Nes.video);
     return 0;

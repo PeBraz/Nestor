@@ -463,7 +463,7 @@ void rol(struct nestor * nes, uint8_t * mem)
         nes->regs.status &= ~CARRY_FLAG;
 
     *mem <<= 1;
-    if (carry) *mem |= 1;
+    if (carry) *mem |= 0x1;
 
     negative_update(nes, *mem);
     zero_update(nes, *mem);

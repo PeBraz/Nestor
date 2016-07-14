@@ -61,20 +61,10 @@ void nes_pre_read(struct nestor *nes, uint16_t mem_addr)
 
 void nes_check_read(struct nestor *nes, uint16_t mem_addr)
 {
-    // If not reading from a ppu register 0x2000 - 0x3FFF or 0x4014
-
-   /* if (mem_addr == 0x0015 ) {
-        if (nes->memory[0x15] & 0x10){
-        printf("mem access (pc: %x) %X: %x\n",nes->regs.pc, mem_addr, nes->memory[mem_addr]);
-        getchar();
-        }
-    }*/
     if (!((mem_addr >= 0x2000 && mem_addr < 0x4000) || mem_addr == 0x4014 || mem_addr == 0x4016)) return;
-    //printf("%x - %x\n", mem_addr, nes->memory[mem_addr]);
+
     if (mem_addr == 0x4014) {
         uint16_t mem_off = (nes->memory[0x4014] << 8);
-        /*if (memcmp(nes->video.oam, nes->memory + mem_off, NES_OAM_MEM_SIZE) != 0)
-            printf("writing new data\n"); -*/ 
         memcpy(nes->video.oam, nes->memory + mem_off, NES_OAM_MEM_SIZE);
         return;
     }
@@ -103,7 +93,6 @@ void nes_check_read(struct nestor *nes, uint16_t mem_addr)
         case 0x3: 
             break;
         case 0x4: 
-            //printf("OAM_DATA: %x\n", nes->memory[mem_addr]);
             break;
         case 0x5: break;
         case 0x6: 
