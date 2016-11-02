@@ -2,27 +2,27 @@ CC=gcc
 XNAME=nestor
 MACROS=-DNESTOR_DEBUG -DNESTOR_BREAK 
 MFILE=-imacros macros.h
+CFLAGS=-g
 all: main.o op.o op_modes.o nestor.o main.o graphi.o ppu_registers.o
-	${CC} -o ${XNAME} main.o op.o op_modes.o nestor.o graphi.o ppu_registers.o -lSDL2
+	${CC} ${CFLAGS} -o ${XNAME} main.o op.o op_modes.o nestor.o graphi.o ppu_registers.o -lSDL2 -pthread
 
 ppu_registers.o:
-	${CC} -g -c ppu_registers.c
+	${CC} ${CFLAGS} -c ppu_registers.c
 main.o:
-	${CC} ${MFILE} -g -c main.c
+	${CC} ${MFILE} ${CFLAGS} -c main.c -pthread
 nestor.o:
-	${CC} ${MFILE} -g -c nestor.c
+	${CC} ${MFILE} ${CFLAGS} -c nestor.c
 op_modes.o:
-	${CC} ${MFILE} -g -c op_modes.c
+	${CC} ${MFILE} ${CFLAGS} -c op_modes.c
 op.o:
-	${CC} ${MFILE} -g -c op.c
+	${CC} ${MFILE} ${CFLAGS} -c op.c
 op_tests.o:
-	${CC} ${MFILE} -g -c op_tests.c
+	${CC} ${MFILE} ${CFLAGS} -c op_tests.c
 graphi.o:
-	${CC} ${MFILE} -g -c graphi.c
+	${CC} ${MFILE} ${CFLAGS} -c graphi.c
 
 val: all
-    valgrind --leak-check=full ./${XNAME}
-
+	valgrind --leak-check=full ./${XNAME}
 
 test-c: op.o op_modes.o nestor.o op_tests.o
 	${CC} -o ${XNAME}_tests op.o op_modes.o nestor.o op_tests.o 

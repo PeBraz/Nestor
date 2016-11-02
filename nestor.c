@@ -1,6 +1,6 @@
 #include "nestor.h"
 #include "graphi.h"
-
+#include <pthread.h>
 
 #define NES_ROM_HEADER_SIZE 16
 
@@ -392,21 +392,30 @@ struct nestor nestor_init()
 }
 
 
-void emulate(struct nestor * nes)
+
+static pthread_mutex_t mem_lock = PTHREAD_MUTEX_INITIALIZER;
+
+
+int emulate(struct nestor * nes)
 {
 	//take instruction code
+	pthread_mutex_lock(&mem_lock);
 	uint8_t op = nes->memory[nes->regs.pc];
+
 
 	if (nes->opcodes[op] != NULL) {
 		nes->opcodes[op](nes);
 	} else {
 		printf("[M:%02x]: %02x not found\n", nes->regs.pc, op);
+		return 1;
 	}
 #ifdef NESTOR_BREAK
 	getchar();
 #endif
 
 	nes->regs.pc++;
+	pthread_mutex_unlock(&mem_lock);
+	return 0;
 }
 
 
@@ -490,21 +499,35 @@ void set_irq(struct nestor *nes)
 
 }
 
+static int in_nmi = 0;
+
 void set_nmi(struct nestor *nes)
 {
-	if (!nes->video.vblank_nmi) return;	
+	if (!nes->video.vblank_nmi || in_nmi) return;
+	pthread_mutex_lock(&mem_lock);
+	in_nmi = 1;
+	//nes->memory[PPUSTATUS] |= STATUS_VBLANK;
+	//jsr(nes, (nes->memory[NMI_INTERRPUT + 1] << 8) | nes->memory[NMI_INTERRPUT]);
+	//php(nes);
 	nestor_st_push(nes, (uint8_t)((nes->regs.pc) >> 8 )); //program counter high
     nestor_st_push(nes, (uint8_t)(nes->regs.pc));   //program counter low
     nestor_st_push(nes, nes->regs.status);  //status register
+    printf("IN NMI %x -> %x\n", nes->regs.pc,(nes->memory[NMI_INTERRPUT + 1] << 8) | nes->memory[NMI_INTERRPUT]);
 	nes->regs.pc = (nes->memory[NMI_INTERRPUT + 1] << 8) | nes->memory[NMI_INTERRPUT];
-
+	pthread_mutex_unlock(&mem_lock);
 
 }
 
-int nes_vblank(struct nestor *nes) 
+void nes_vblank(struct nestor *nes) 
 {
+
+	nes->nmi = 1; // set nmi occured to true
 	set_nmi(nes);
-	nes->memory[PPUSTATUS] |= STATUS_VBLANK;
+}
+void nes_update(struct nestor *nes)
+{
+	in_nmi = 0;
+	nes->nmi = 0;
 	update_screen(&nes->video);
 }
 
@@ -557,7 +580,6 @@ void nestor_input_write(struct nestor *nes)
 int nestor_events(struct nestor *nes) 
 {
 	SDL_Event event;
-
 	while (SDL_PollEvent(&event)) {
 		switch(event.type) {
 			case SDL_QUIT:

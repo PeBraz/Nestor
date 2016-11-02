@@ -35,8 +35,8 @@
 
 #define SCREEN_TILES_COUNT 960
 
-#define PIXEL_WIDTH 3
-#define PIXEL_HEIGHT 3
+#define PIXEL_WIDTH 1
+#define PIXEL_HEIGHT 1
 
 //PPU control register -> write
 #define PPUCTRL 0x2000
@@ -98,6 +98,7 @@ struct graphics
 {
     SDL_Color pallete[64];
     SDL_Window * window;
+    SDL_Renderer * renderer;
     enum nes_mirror mirror;
     uint8_t memory[NES_V_MEM_SIZE];
     uint8_t oam[NES_OAM_MEM_SIZE];
@@ -111,7 +112,14 @@ struct graphics
     struct{
     	int width;
     	int height;
-    }pixel;
+    } pixel;
+
+    /* Keeps tile information cached, preventing unnecessary updates*/
+    struct{
+        uint8_t id; //nametable offset
+        uint8_t patt[16];
+        SDL_Surface *tile;
+    } cache[SCREEN_TILES_COUNT];
 
     // PPUCTRL
     uint16_t nametable;
@@ -141,6 +149,8 @@ void draw_tile(struct graphics*,int,int);
 int get_pallete_color(struct graphics *, uint8_t,int);
 void draw_pixel(struct graphics *,int,int,int);
 
+void init_pattern_table(struct graphics *);
+void update_pattern_table(struct graphics *);
 
 SDL_Window *ppu_mem_view(struct graphics *);
 SDL_Window *ppu_nametable_view(struct graphics *);

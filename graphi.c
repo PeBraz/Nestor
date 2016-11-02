@@ -8,6 +8,13 @@
 
 #define NAME_TO_ATTR(nametable) (nametable + 960)
 
+
+static struct _FPS{
+    int last;
+    int frames;
+    int current;
+} fps;
+
 void  draw_tile_from_scanline(struct graphics*, int, int);
 void sprite_evaluation(struct graphics*, int, int);
 void init_pattern_table(struct graphics *);
@@ -25,6 +32,9 @@ struct graphics init_graphics()
                                         SDL_WINDOWPOS_UNDEFINED,
                                         PIXEL_WIDTH * 256, PIXEL_HEIGHT * 240, SDL_WINDOW_SHOWN);
 
+
+
+    fps = (struct _FPS){SDL_GetTicks(),0,0};
     struct graphics g= (struct graphics)
     { .pallete = {
         (SDL_Color){84,84,84,255},(SDL_Color){0,30,116,255},(SDL_Color){8,16,144,255},
@@ -49,9 +59,17 @@ struct graphics init_graphics()
         (SDL_Color){160,214,228,255},(SDL_Color){160,162,160,255},(SDL_Color){0,0,0,255},(SDL_Color){0,0,0,255},
 
         },
+        .renderer = SDL_CreateRenderer(w,-1,0),
         .window = w,
         .pixel = {PIXEL_WIDTH, PIXEL_HEIGHT},
     };
+
+    int i;
+    for (i=0; i< SCREEN_TILES_COUNT; i++) {
+        g.cache[i].id = 0;
+        g.cache[i].tile = NULL;
+    }
+
     return g;
 
 
@@ -90,6 +108,19 @@ void init_pattern_table(struct graphics *g) {
                                                 8 * g->pixel.width, 
                                                 8 * g->pixel.height, 
                                                 32, 0, 0, 0, 0);
+    }
+}
+
+void update_fps(struct graphics *g) 
+{
+    char title_buffer[100];
+    fps.frames++;
+    if (fps.last < SDL_GetTicks() - 1000) {
+        fps.last = SDL_GetTicks();
+        fps.current = fps.frames;
+        fps.frames = 0;
+        sprintf(title_buffer, "FPS: %d\n", fps.current);
+        SDL_SetWindowTitle(g->window, title_buffer);
     }
 }
 
@@ -134,25 +165,63 @@ void __update_pattern_table(struct graphics *g, SDL_Surface **patt, int mem_offs
     }
 }
 
+SDL_Surface *cache_check_duplicate_tile(struct graphics *g, int tile_offset)
+{
+
+    uint8_t nametable = g->memory[g->nametable + tile_offset];
+
+    if (!g->cache[tile_offset].tile || g->cache[tile_offset].id != nametable) return NULL;
+
+    uint16_t patt_table = g->bg_addr?0x1000:0x0000;
+    uint8_t * patt = &g->memory[patt_table | (nametable << 4)];
+
+    if (memcmp(patt, &g->cache[tile_offset].patt, 16)) 
+        return g->cache[tile_offset].tile;
+
+    // Can already cache id and pattern table
+    g->cache[tile_offset].id = nametable;
+    memcpy(&g->cache[tile_offset].patt, patt, 16);
+
+    return NULL;
+}
+
+void cache_update_tile(struct graphics *g, int tile_offset, SDL_Surface *tile)
+{    
+    SDL_FreeSurface(g->cache[tile_offset].tile);
+    g->cache[tile_offset].tile = tile;
+}
+
 SDL_Surface *get_tile(struct graphics *g, int tile_offset) 
 {
-    SDL_Surface *tile = SDL_CreateRGBSurface(0, 8 * g->pixel.width, 8 * g->pixel.height, 
+    /*SDL_Texture *tile = SDL_CreateTexture(g->renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 
+            g->pixel.width * 8, g->pixel.height * 8);
+    */
+    SDL_Surface * tile;
+
+    if (tile = cache_check_duplicate_tile(g, tile_offset))
+        return tile;
+
+
+    tile = SDL_CreateRGBSurface(0, 8 * g->pixel.width, 8 * g->pixel.height, 
                                                 32, 0, 0, 0, 0);
+
 
     uint16_t patt_table = g->bg_addr?0x1000:0x0000;
     uint8_t nametable = g->memory[g->nametable + tile_offset];
 
+    uint8_t attr_col = (tile_offset & 0x1C) >> 2; //get column number
+    uint8_t attr_line  = (tile_offset & 0x3F0) >> 7; // get line number
+    int rel_attr = attr_line * 8 + attr_col;//(tile_offset/128) * 8 + (tile_offset%32/4); // bit ops faster...
     int byte_i, pix_i;
     for (byte_i=0; byte_i < 8; byte_i++) {
         uint8_t plane_1 = g->memory[(patt_table | (nametable << 4)) + byte_i];
         uint8_t plane_2 = g->memory[(patt_table | (nametable << 4)) + byte_i+8];
         
-        /* Tile Attribute table*/
-        int rel_attr = (tile_offset/128) * 8 + (tile_offset%32/4); // bit ops faster...
+
         int attr_byte = g->memory[g->nametable + SCREEN_TILES_COUNT + rel_attr]; // each byte for 4 tiles
         int shift_value = (((attr_byte >> 5) & 0x1) + ((attr_byte>>1) & 0x1));
         int pallete_num = (attr_byte >> shift_value) & 0x3;
-        /* For each bit*/
+
         for (pix_i=0; pix_i < 8; pix_i++) {
 
             int patt_id = ((plane_1 >> (7-pix_i)) & 0x1) | (((plane_2 >> (7-pix_i)) & 0x1) << 1);
@@ -168,6 +237,9 @@ SDL_Surface *get_tile(struct graphics *g, int tile_offset)
             SDL_FillRect(tile, rect, SDL_MapRGBA(tile->format, color.r,color.g,color.b,color.a));
         }
     }
+
+    cache_update_tile(g, tile_offset, tile);
+
     return tile;
 }
 
@@ -208,6 +280,7 @@ void *get_sprite(struct graphics *g, int sprite_offset)
     }
     SDL_Rect dst = (SDL_Rect){x*g->pixel.width, y*g->pixel.height, g->pixel.width * 8, g->pixel.height * 8};
     SDL_BlitSurface(sprite_surface, NULL, SDL_GetWindowSurface(g->window), &dst);
+    SDL_FreeSurface(sprite_surface);
 }
 
 SDL_Surface *surface_from_patterns(struct graphics *g, SDL_Surface ** patterns) 
@@ -391,7 +464,7 @@ void draw_bg(struct graphics *g) {
             };
         //get attribute table, try to change colors in tile surface (if old_color = x -> new_color = y)
         SDL_BlitSurface(tile, NULL, main_surface, dst_rect);
-        SDL_FreeSurface(tile);
+        //SDL_FreeSurface(tile);
         //SDL_UpdateWindowSurface(g->window);
     }
 }
@@ -434,6 +507,7 @@ int update_screen(struct graphics * graphics)
     draw_bg(graphics);
     draw_sprites(graphics);
     SDL_UpdateWindowSurface(graphics->window);
+    update_fps(graphics);
     return 0;
 }
 

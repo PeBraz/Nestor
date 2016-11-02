@@ -211,7 +211,6 @@ void bcc(struct nestor * nes, uint8_t val)
  */
 void bcs(struct nestor * nes, uint8_t val) 
 {
-
     if (nes->regs.status & CARRY_FLAG) 
         nes->regs.pc += ( val ^ SIGNED_BIT) - SIGNED_BIT; 
 }

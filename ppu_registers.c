@@ -1,7 +1,7 @@
 #include <string.h>
 #include <assert.h>
 #include "ppu_registers.h"
-
+#include "nestor.h"
 #define PPUCTRL_NAMETABLE_BITS 0x03 
 #define PPUCTRL_VRAM_INC_BITS 0x04
 #define PPUCTRL_SPRITE_ADDR_BITS 0x08
@@ -55,6 +55,11 @@ void access_oamaddr(struct graphics *g, uint8_t *addr)
 //
 void nes_pre_read(struct nestor *nes, uint16_t mem_addr) 
 {
+    // PPUStatus read
+    if (mem_addr == 0x2002 && nes->nmi) { 
+        nes->memory[0x2002] |= PPUCTRL_VBLANK_NMI;
+    }
+
     if (!(mem_addr == 0x4016)) return;
     nestor_input_read(nes);
 }
@@ -75,20 +80,27 @@ void nes_check_read(struct nestor *nes, uint16_t mem_addr)
         return;
     }
 
+
     switch(mem_addr & 0x7) {
         // Writing to ppuctrl
         case 0x0: 
+            printf("ppuctrl: %x [%x]\n", mem_addr, nes->memory[mem_addr]);
             access_ppuctrl(&nes->video, nes->memory[mem_addr]);
             break;
 
-        case 0x1: break;
+        case 0x1: 
+        break;
 
         //Reading from ppustatus
         case 0x2: 
+            //printf("ppustatus: %x [%x]\n", mem_addr, nes->memory[mem_addr]);
+
+            //printf("ppustatus %x\n at %x\n", nes->memory[mem_addr], mem_addr);
             nes->memory[0x2002] &= 0x7F;
             nes->memory[0x2005] = 0;
             nes->memory[0x2006] = 0;
             nes->video.ppuaddr_writes = 0;
+            nes->nmi = 0;
             break;
         case 0x3: 
             break;

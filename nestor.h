@@ -185,6 +185,7 @@ struct nestor {
     uint8_t memory[NES_MEM_SIZE];
     struct graphics video;
     int action; //write(1), read(2) or none(0)
+    int nmi;
     struct {
         uint8_t acc;
         uint8_t x;
@@ -227,9 +228,19 @@ struct nestor {
                 }
 #endif
 
+
+void set_nmi(struct nestor *nes);
+int emulate(struct nestor * nes);
+int nestor_events(struct nestor *nes);
+
 struct nestor nestor_init();
 int nestor_cartridge(struct nestor *, char *);
 
+void nestor_input_read(struct nestor *nes);
+void nestor_input_write(struct nestor *nes);
+
+void nes_vblank(struct nestor *nes);
+void nes_update(struct nestor *nes);
 
 void nestor_st_push(struct nestor *, uint8_t);
 uint8_t nestor_st_pop(struct nestor *);

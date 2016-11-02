@@ -1,9 +1,34 @@
 
 #include <unistd.h>
-#include "nestor.h"
+#include <pthread.h>
+#include <time.h>
 #include <SDL2/SDL.h>
-//#include "graphi.h"
 
+#include "nestor.h"
+#include "graphi.h"
+
+
+static int quit_flag = 0;
+static int vblank_clock = 0;
+
+static int update = 0;
+
+void *video_fn(void *__nes)
+{
+    sleep(1);
+    struct nestor *nes = (struct nestor*) __nes;
+    while (true) {
+        printf("SET NMI\n");
+        set_nmi(nes);
+        printf("UPDATE\n");
+        nes_update(nes); 
+    
+        if (nestor_events(nes) || quit_flag) {
+            quit_flag = 1;
+            break;
+        }
+    }
+}
 
 int main(int arg, char * argv[])
 {
@@ -29,17 +54,26 @@ int main(int arg, char * argv[])
         return 1;
     }
 
-    int vblank_clock = 3000;
+    pthread_t video_thr;
+    if (pthread_create(&video_thr, NULL, video_fn, (void*)&Nes)) {
+        return 1;
+    }
+
     while (true) {
-        emulate(&Nes);
-        if (!(--vblank_clock)){
-            nes_vblank(&Nes); 
-            vblank_clock = 3000;
+        // emulate a cpu cycle
+        if (emulate(&Nes) || quit_flag) {
+            quit_flag = 1;
+            break;
+        }
+        vblank_clock += 1;
+        if (vblank_clock > 10000) {
+            printf("start vblank\n");
+            Nes.nmi = 1;
+            vblank_clock = 0;
         }
 
-        if (nestor_events(&Nes))
-            break;  
     }
+    pthread_join(video_thr, NULL);
     free_graphics(&Nes.video);
     return 0;
 
